@@ -52,6 +52,11 @@ function clear3DModel() {
 function loadLocations() {
   const raw = localStorage.getItem(locationsKey)
   const list = raw ? JSON.parse(raw) : []
+  if (list.length === 0) {
+    const defaultLocations = ['Main Lab', 'Cold Room', 'Chemical Store']
+    saveLocations(defaultLocations)
+    return defaultLocations
+  }
   return list
 }
 
@@ -74,7 +79,10 @@ function renderLocations() {
 
 function ensureDefaultLocations() {
   const raw = localStorage.getItem(locationsKey)
-  if (!raw) saveLocations(['Main Lab', 'Cold Room', 'Chemical Store'])
+  if (!raw) {
+    const defaultLocations = ['Main Lab', 'Cold Room', 'Chemical Store']
+    saveLocations(defaultLocations)
+  }
 }
 
 function renderAmountUnits() {

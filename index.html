@@ -20,9 +20,103 @@
       </div>
     </header>
 
-    <div class="toolbar">
-      <div class="search-wrapper">
-        <input type="text" class="search" id="searchInput" placeholder="Search inventory...">
+    <nav class="nav-tabs">
+      <button class="nav-tab active" data-tab="inventory">Inventory</button>
+      <button class="nav-tab" data-tab="locations">Locations</button>
+      <button class="nav-tab" data-tab="account">Account</button>
+    </nav>
+
+    <div id="inventory-tab" class="tab-content active">
+      <div class="toolbar">
+        <div class="search-wrapper">
+          <input type="text" class="search" id="searchInput" placeholder="Search inventory...">
+        </div>
+      </div>
+
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th>Item Name</th>
+              <th>Vendor</th>
+              <th>Catalog #</th>
+              <th>CAS</th>
+              <th>Amount</th>
+              <th>Unit Size</th>
+              <th>Price</th>
+              <th>Location</th>
+              <th>URL</th>
+              <th>Min Stock</th>
+              <th>Max Stock</th>
+              <th>Image</th>
+              <th>3D Model</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="inventoryTable">
+          </tbody>
+        </table>
+      </div>
+      <div class="footer">
+        <div id="itemCount">0 items</div>
+      </div>
+    </div>
+
+    <div id="locations-tab" class="tab-content">
+      <div class="card">
+        <h2>Manage Locations</h2>
+        <div class="location-form">
+          <div class="field">
+            <label for="newLocationInput">Add New Location</label>
+            <div style="display: flex; gap: 8px;">
+              <input id="newLocationInput" type="text" placeholder="Enter location name">
+              <button id="addLocationBtn" class="btn primary">Add</button>
+            </div>
+          </div>
+        </div>
+        <div class="location-list">
+          <h3>Current Locations</h3>
+          <div id="locationItems"></div>
+        </div>
+      </div>
+    </div>
+
+    <div id="account-tab" class="tab-content">
+      <div class="card">
+        <h2>Account Information</h2>
+        <div class="account-info">
+          <div class="field">
+            <label>Name</label>
+            <input id="accountName" type="text" readonly>
+          </div>
+          <div class="field">
+            <label>Email</label>
+            <input id="accountEmail" type="email" readonly>
+          </div>
+        </div>
+      </div>
+      
+      <div class="card">
+        <h2>Change Password</h2>
+        <form id="passwordForm">
+          <div class="field">
+            <label for="currentPassword">Current Password</label>
+            <input id="currentPassword" type="password" required>
+          </div>
+          <div class="field">
+            <label for="newPassword">New Password</label>
+            <input id="newPassword" type="password" required minlength="8">
+          </div>
+          <div class="field">
+            <label for="confirmNewPassword">Confirm New Password</label>
+            <input id="confirmNewPassword" type="password" required minlength="8">
+          </div>
+          <div class="actions">
+            <button type="submit" class="btn primary">Change Password</button>
+          </div>
+          <div id="passwordError" class="error" role="alert"></div>
+          <div id="passwordSuccess" class="success" role="alert"></div>
+        </form>
       </div>
     </div>
 

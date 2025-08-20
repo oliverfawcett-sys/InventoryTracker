@@ -8,6 +8,19 @@ const userInfo = document.getElementById('userInfo')
 const logoutBtn = document.getElementById('logoutBtn')
 const darkModeToggle = document.getElementById('darkModeToggle')
 const darkModeIcon = document.getElementById('darkModeIcon')
+const navTabs = document.querySelectorAll('.nav-tab')
+const tabContents = document.querySelectorAll('.tab-content')
+const newLocationInput = document.getElementById('newLocationInput')
+const addLocationBtn = document.getElementById('addLocationBtn')
+const locationItems = document.getElementById('locationItems')
+const accountName = document.getElementById('accountName')
+const accountEmail = document.getElementById('accountEmail')
+const passwordForm = document.getElementById('passwordForm')
+const currentPassword = document.getElementById('currentPassword')
+const newPassword = document.getElementById('newPassword')
+const confirmNewPassword = document.getElementById('confirmNewPassword')
+const passwordError = document.getElementById('passwordError')
+const passwordSuccess = document.getElementById('passwordSuccess')
 
 let currentUser = null
 
@@ -24,6 +37,8 @@ function checkAuth() {
     currentUser = JSON.parse(user)
     userInfo.textContent = `Welcome, ${currentUser.name}`
     loadInventory()
+    loadAccountInfo()
+    renderLocations()
   } catch (e) {
     localStorage.removeItem('authToken')
     localStorage.removeItem('currentUser')
@@ -164,6 +179,111 @@ function updateDarkModeIcon(theme) {
   }
 }
 
+function switchTab(tabName) {
+  navTabs.forEach(tab => {
+    tab.classList.remove('active')
+    if (tab.dataset.tab === tabName) {
+      tab.classList.add('active')
+    }
+  })
+  
+  tabContents.forEach(content => {
+    content.classList.remove('active')
+    if (content.id === `${tabName}-tab`) {
+      content.classList.add('active')
+    }
+  })
+}
+
+function loadLocations() {
+  const raw = localStorage.getItem('inventoryLocationsV1')
+  const list = raw ? JSON.parse(raw) : ['Main Lab', 'Cold Room', 'Chemical Store']
+  return list
+}
+
+function saveLocations(list) {
+  localStorage.setItem('inventoryLocationsV1', JSON.stringify(list))
+}
+
+function renderLocations() {
+  const locations = loadLocations()
+  locationItems.innerHTML = locations.map(location => `
+    <div class="location-item">
+      <span class="location-name">${escapeHtml(location)}</span>
+      <div class="location-actions">
+        <button class="btn danger" onclick="deleteLocation('${escapeHtml(location)}')">Delete</button>
+      </div>
+    </div>
+  `).join('')
+}
+
+function addLocation(name) {
+  const locations = loadLocations()
+  if (!locations.includes(name)) {
+    locations.push(name)
+    saveLocations(locations)
+    renderLocations()
+    newLocationInput.value = ''
+  }
+}
+
+function deleteLocation(name) {
+  if (confirm(`Are you sure you want to delete the location "${name}"?`)) {
+    const locations = loadLocations()
+    const filtered = locations.filter(loc => loc !== name)
+    saveLocations(filtered)
+    renderLocations()
+  }
+}
+
+function loadAccountInfo() {
+  if (currentUser) {
+    accountName.value = currentUser.name || ''
+    accountEmail.value = currentUser.email || ''
+  }
+}
+
+async function changePassword() {
+  if (newPassword.value !== confirmNewPassword.value) {
+    passwordError.textContent = 'New passwords do not match'
+    passwordError.style.display = 'block'
+    passwordSuccess.style.display = 'none'
+    return
+  }
+  
+  try {
+    const token = localStorage.getItem('authToken')
+    const response = await fetch('/api/auth/change-password', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify({
+        currentPassword: currentPassword.value,
+        newPassword: newPassword.value
+      })
+    })
+    
+    const data = await response.json()
+    
+    if (response.ok) {
+      passwordSuccess.textContent = 'Password changed successfully!'
+      passwordSuccess.style.display = 'block'
+      passwordError.style.display = 'none'
+      passwordForm.reset()
+    } else {
+      passwordError.textContent = data.message || 'Failed to change password'
+      passwordError.style.display = 'block'
+      passwordSuccess.style.display = 'none'
+    }
+  } catch (error) {
+    passwordError.textContent = 'Network error. Please try again.'
+    passwordError.style.display = 'block'
+    passwordSuccess.style.display = 'none'
+  }
+}
+
 async function render3DModelTiny(viewerEl, cid) {
   try {
     if (!cid || !viewerEl) return
@@ -220,6 +340,39 @@ logoutBtn.addEventListener('click', () => {
 
 if (darkModeToggle) {
   darkModeToggle.addEventListener('click', toggleDarkMode)
+}
+
+navTabs.forEach(tab => {
+  tab.addEventListener('click', () => {
+    switchTab(tab.dataset.tab)
+  })
+})
+
+if (addLocationBtn) {
+  addLocationBtn.addEventListener('click', () => {
+    const name = newLocationInput.value.trim()
+    if (name) {
+      addLocation(name)
+    }
+  })
+}
+
+if (newLocationInput) {
+  newLocationInput.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') {
+      const name = newLocationInput.value.trim()
+      if (name) {
+        addLocation(name)
+      }
+    }
+  })
+}
+
+if (passwordForm) {
+  passwordForm.addEventListener('submit', (e) => {
+    e.preventDefault()
+    changePassword()
+  })
 }
 
 initDarkMode()
