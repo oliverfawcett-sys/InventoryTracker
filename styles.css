@@ -295,7 +295,6 @@ tbody tr:last-child td {
   position: relative;
   overflow: hidden;
   box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
-  z-index: 11;
 }
 
 .preview-container {
@@ -303,8 +302,6 @@ tbody tr:last-child td {
   gap: 20px;
   margin-bottom: 24px;
   align-items: flex-start;
-  position: relative;
-  z-index: 100;
 }
 
 .image-preview {
@@ -317,25 +314,8 @@ tbody tr:last-child td {
   flex-direction: column;
   overflow: hidden;
   box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
-  position: relative;
-  z-index: 101;
   min-height: 180px;
   min-width: 180px;
-}
-
-.image-preview[style*="display: block"] {
-  visibility: visible !important;
-  opacity: 1 !important;
-  position: relative !important;
-  z-index: 999 !important;
-}
-
-.image-preview.visible {
-  display: flex !important;
-  visibility: visible !important;
-  opacity: 1 !important;
-  position: relative !important;
-  z-index: 999 !important;
 }
 
 .image-preview h3 {
