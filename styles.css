@@ -570,22 +570,103 @@ tbody tr:last-child td {
   margin-top: 16px;
 }
 
+.mobile-nav {
+  display: none;
+}
+
+.mobile-nav-toggle {
+  width: 100%;
+  padding: 16px 20px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-primary);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  font-size: 16px;
+  font-weight: 500;
+  color: var(--text-primary);
+  transition: all 0.3s ease;
+  box-shadow: var(--shadow-primary);
+}
+
+.mobile-nav-toggle:hover {
+  background: var(--bg-tertiary);
+  border-color: var(--accent-primary);
+}
+
+.mobile-nav-text {
+  font-weight: 600;
+}
+
+.mobile-nav-icon {
+  font-size: 12px;
+  transition: transform 0.3s ease;
+  color: var(--text-secondary);
+}
+
+.mobile-nav-toggle.active .mobile-nav-icon {
+  transform: rotate(180deg);
+}
+
+.mobile-nav-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-primary);
+  border-top: none;
+  border-radius: 0 0 8px 8px;
+  box-shadow: var(--shadow-secondary);
+  z-index: 1000;
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.3s ease;
+}
+
+.mobile-nav-dropdown.active {
+  max-height: 200px;
+}
+
+.mobile-nav-item {
+  width: 100%;
+  padding: 16px 20px;
+  background: var(--bg-secondary);
+  border: none;
+  text-align: left;
+  font-size: 16px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.3s ease;
+  border-bottom: 1px solid var(--bg-tertiary);
+}
+
+.mobile-nav-item:last-child {
+  border-bottom: none;
+}
+
+.mobile-nav-item:hover {
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+}
+
+.mobile-nav-item.active {
+  background: var(--accent-primary);
+  color: #ffffff;
+}
+
 @media (max-width: 768px) {
   .nav-tabs {
-    flex-direction: column;
-    margin-bottom: 16px;
+    display: none;
   }
   
-  .nav-tab {
-    padding: 12px 16px;
-    font-size: 13px;
-    border-bottom: none;
-    border-right: 3px solid transparent;
-  }
-  
-  .nav-tab.active {
-    border-bottom-color: transparent;
-    border-right-color: var(--accent-primary);
+  .mobile-nav {
+    display: block;
+    position: relative;
+    margin-bottom: 20px;
   }
   
   .location-item {

@@ -10,6 +10,10 @@ const darkModeToggle = document.getElementById('darkModeToggle')
 const darkModeIcon = document.getElementById('darkModeIcon')
 const navTabs = document.querySelectorAll('.nav-tab')
 const tabContents = document.querySelectorAll('.tab-content')
+const mobileNavToggle = document.getElementById('mobileNavToggle')
+const mobileNavDropdown = document.getElementById('mobileNavDropdown')
+const mobileNavItems = document.querySelectorAll('.mobile-nav-item')
+const mobileNavText = document.querySelector('.mobile-nav-text')
 const newLocationInput = document.getElementById('newLocationInput')
 const addLocationBtn = document.getElementById('addLocationBtn')
 const locationItems = document.getElementById('locationItems')
@@ -187,12 +191,28 @@ function switchTab(tabName) {
     }
   })
   
+  mobileNavItems.forEach(item => {
+    item.classList.remove('active')
+    if (item.dataset.tab === tabName) {
+      item.classList.add('active')
+    }
+  })
+  
   tabContents.forEach(content => {
     content.classList.remove('active')
     if (content.id === `${tabName}-tab`) {
       content.classList.add('active')
     }
   })
+  
+  if (mobileNavText) {
+    mobileNavText.textContent = tabName.charAt(0).toUpperCase() + tabName.slice(1)
+  }
+  
+  if (mobileNavDropdown) {
+    mobileNavDropdown.classList.remove('active')
+    mobileNavToggle.classList.remove('active')
+  }
 }
 
 function loadLocations() {
@@ -348,6 +368,19 @@ navTabs.forEach(tab => {
   })
 })
 
+if (mobileNavToggle) {
+  mobileNavToggle.addEventListener('click', () => {
+    mobileNavDropdown.classList.toggle('active')
+    mobileNavToggle.classList.toggle('active')
+  })
+}
+
+mobileNavItems.forEach(item => {
+  item.addEventListener('click', () => {
+    switchTab(item.dataset.tab)
+  })
+})
+
 if (addLocationBtn) {
   addLocationBtn.addEventListener('click', () => {
     const name = newLocationInput.value.trim()
@@ -374,6 +407,15 @@ if (passwordForm) {
     changePassword()
   })
 }
+
+document.addEventListener('click', (e) => {
+  if (mobileNavToggle && mobileNavDropdown) {
+    if (!mobileNavToggle.contains(e.target) && !mobileNavDropdown.contains(e.target)) {
+      mobileNavDropdown.classList.remove('active')
+      mobileNavToggle.classList.remove('active')
+    }
+  }
+})
 
 initDarkMode()
 checkAuth()
