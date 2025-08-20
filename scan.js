@@ -152,22 +152,60 @@ async function extractCasAndRedirect(file) {
     const reader = new FileReader()
     reader.onload = function(e) {
       try { 
-        localStorage.setItem('scannedImageData', e.target.result) 
-        console.log('Stored image data, length:', e.target.result.length)
+        // Compress the image to reduce size
+        const img = new Image()
+        img.onload = function() {
+          const canvas = document.createElement('canvas')
+          const ctx = canvas.getContext('2d')
+          
+          // Set canvas size to reasonable dimensions
+          const maxSize = 400
+          let { width, height } = img
+          
+          if (width > height) {
+            if (width > maxSize) {
+              height = (height * maxSize) / width
+              width = maxSize
+            }
+          } else {
+            if (height > maxSize) {
+              width = (width * maxSize) / height
+              height = maxSize
+            }
+          }
+          
+          canvas.width = width
+          canvas.height = height
+          
+          // Draw and compress
+          ctx.drawImage(img, 0, 0, width, height)
+          const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.7)
+        
+          localStorage.setItem('scannedImageData', compressedDataUrl) 
+          console.log('Stored compressed image data, length:', compressedDataUrl.length)
+          console.log('Image data preview:', compressedDataUrl.substring(0, 100) + '...')
+          
+          // Verify the data was stored
+          const stored = localStorage.getItem('scannedImageData')
+          console.log('Verified stored data length:', stored ? stored.length : 'null')
+        }
+        img.src = e.target.result
       } catch (error) {
         console.error('Failed to store image data:', error)
       }
     }
     reader.readAsDataURL(file)
     
+    // Wait a bit longer to ensure localStorage is written
     setTimeout(() => {
       try { 
         console.log('Redirecting to new.html with image data stored')
+        console.log('Final localStorage check - scannedImageData:', localStorage.getItem('scannedImageData') ? 'Present' : 'Missing')
         window.location.href = 'new.html' 
       } catch (error) {
         console.error('Failed to redirect:', error)
       }
-    }, 1000)
+    }, 1500)
     
   } catch (e) {
     scanStatus.textContent = 'Scan failed: ' + (e?.message || e)

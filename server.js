@@ -8,8 +8,20 @@ const { Pool } = require('pg')
 const app = express()
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 20 * 1024 * 1024 } })
 
-app.use(express.json())
+app.use(express.json({ limit: '50mb' }))
+app.use(express.urlencoded({ limit: '50mb', extended: true }))
 app.use(express.static(__dirname))
+
+// Error handling middleware for payload size
+app.use((error, req, res, next) => {
+  if (error instanceof SyntaxError && error.status === 400 && 'body' in error) {
+    return res.status(400).json({ message: 'Request payload too large. Please try with a smaller image.' })
+  }
+  if (error.type === 'entity.too.large') {
+    return res.status(413).json({ message: 'Request payload too large. Please try with a smaller image.' })
+  }
+  next(error)
+})
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
@@ -160,6 +172,15 @@ app.post('/api/inventory', authenticateToken, async (req, res) => {
   try {
     const { itemName, vendor, catalog, cas, price, unitSize, amount, amountUnit, minStock, maxStock, url, location, imageData, modelCid } = req.body
     
+    console.log('Adding inventory item:', {
+      itemName,
+      vendor,
+      catalog,
+      cas,
+      imageDataLength: imageData ? imageData.length : 0,
+      modelCid
+    })
+    
     const result = await pool.query(
       `INSERT INTO inventory_items 
        (user_id, item_name, vendor, catalog, cas, price, unit_size, amount, amount_unit, min_stock, max_stock, url, location, image_data, model_cid) 
@@ -168,6 +189,7 @@ app.post('/api/inventory', authenticateToken, async (req, res) => {
       [req.user.userId, itemName, vendor, catalog, cas, price, unitSize, amount, amountUnit, minStock, maxStock, url, location, imageData, modelCid]
     )
     
+    console.log('Item added successfully with ID:', result.rows[0].id)
     res.status(201).json(result.rows[0])
   } catch (error) {
     console.error('Add inventory error:', error)

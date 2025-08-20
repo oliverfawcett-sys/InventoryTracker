@@ -195,10 +195,26 @@ document.addEventListener('DOMContentLoaded', () => {
       const imagePreview = document.getElementById('imagePreview')
       const scannedImage = document.getElementById('scannedImage')
       if (imagePreview && scannedImage) {
+        console.log('Found image elements, setting up image display...')
         scannedImage.src = imageData
         imagePreview.style.display = 'block'
+        imagePreview.style.visibility = 'visible'
+        imagePreview.style.opacity = '1'
+        imagePreview.style.position = 'relative'
+        imagePreview.style.zIndex = '100'
+        console.log('Image preview element styles:', {
+          display: imagePreview.style.display,
+          visibility: imagePreview.style.visibility,
+          opacity: imagePreview.style.opacity,
+          position: imagePreview.style.position,
+          zIndex: imagePreview.style.zIndex
+        })
         console.log('Displaying scanned image:', imageData.substring(0, 100) + '...')
+      } else {
+        console.error('Image elements not found:', { imagePreview, scannedImage })
       }
+    } else {
+      console.log('No scanned image data found in localStorage')
     }
   } catch (error) {
     console.error('Error displaying scanned image:', error)
@@ -287,8 +303,15 @@ itemForm.addEventListener('submit', async e => {
       console.log('Captured 3D model CID:', modelCid)
     }
     
+    // Check image data size
+    if (imageData && imageData.length > 5 * 1024 * 1024) { // 5MB limit
+      formError.textContent = 'Image data is too large. Please try scanning again with a smaller image.'
+      return
+    }
+    
     console.log('Submitting with image data:', imageData ? 'Present' : 'None')
     console.log('Submitting with model CID:', modelCid)
+    console.log('Image data size:', imageData ? `${(imageData.length / 1024).toFixed(1)}KB` : 'None')
     
     const response = await fetch('/api/inventory', {
       method: 'POST',
