@@ -78,6 +78,8 @@ function renderInventory(items) {
       <td>${item.url ? `<a href="${escapeHtml(item.url)}" target="_blank">Link</a>` : ''}</td>
       <td>${item.min_stock || ''}</td>
       <td>${item.max_stock || ''}</td>
+      <td>${item.image_data ? `<img src="${escapeHtml(item.image_data)}" alt="Item" style="width:50px;height:50px;object-fit:cover;border-radius:4px;">` : ''}</td>
+      <td>${item.model_cid ? `<div class="viewer3d-tiny" data-cid="${escapeHtml(item.model_cid)}" style="width:50px;height:50px;"></div>` : ''}</td>
       <td>
         <button class="btn danger" onclick="deleteItem(${item.id})">Delete</button>
       </td>
@@ -85,6 +87,18 @@ function renderInventory(items) {
   `).join('')
   
   itemCount.textContent = `${filteredItems.length} items`
+  
+  // Initialize 3D models for items that have them
+  setTimeout(() => {
+    filteredItems.forEach(item => {
+      if (item.model_cid) {
+        const viewerEl = document.querySelector(`[data-cid="${item.model_cid}"]`)
+        if (viewerEl && typeof $3Dmol !== 'undefined') {
+          render3DModelTiny(viewerEl, item.model_cid)
+        }
+      }
+    })
+  }, 100)
 }
 
 async function deleteItem(id) {
@@ -113,6 +127,22 @@ async function deleteItem(id) {
 function escapeHtml(s) {
   if (!s) return ''
   return s.toString().replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]))
+}
+
+async function render3DModelTiny(viewerEl, cid) {
+  try {
+    const viewer = $3Dmol.createViewer(viewerEl, { backgroundColor: '#ffffff' })
+    const url = `https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/cid/${cid}/SDF?record_type=3d`
+    const res = await fetch(url)
+    if (!res.ok) throw new Error('No 3D available')
+    const sdf = await res.text()
+    viewer.addModel(sdf, 'sdf')
+    viewer.setStyle({}, { stick: { radius: 0.08 } })
+    viewer.zoomTo()
+    viewer.render()
+  } catch (error) {
+    console.error('Failed to render 3D model:', error)
+  }
 }
 
 searchInput.addEventListener('input', () => {

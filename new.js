@@ -272,6 +272,9 @@ itemForm.addEventListener('submit', async e => {
   
   try {
     const token = localStorage.getItem('authToken')
+    const imageData = localStorage.getItem('scannedImageData') || null
+    const modelCid = viewer ? viewer.getModelIds()[0] : null
+    
     const response = await fetch('/api/inventory', {
       method: 'POST',
       headers: {
@@ -290,11 +293,14 @@ itemForm.addEventListener('submit', async e => {
         minStock: minStock.value ? Number(minStock.value) : null,
         maxStock: maxStock.value ? Number(maxStock.value) : null,
         url: url.value.trim(),
-        location: locationSelect.value
+        location: locationSelect.value,
+        imageData: imageData,
+        modelCid: modelCid
       })
     })
     
     if (response.ok) {
+      localStorage.removeItem('scannedImageData')
       window.location.href = 'index.html'
     } else {
       const data = await response.json()

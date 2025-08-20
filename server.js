@@ -48,6 +48,8 @@ async function createTablesIfNotExist() {
         max_stock DECIMAL(10,2),
         url TEXT,
         location VARCHAR(255),
+        image_data TEXT,
+        model_cid VARCHAR(255),
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `
@@ -156,14 +158,14 @@ app.get('/api/inventory', authenticateToken, async (req, res) => {
 
 app.post('/api/inventory', authenticateToken, async (req, res) => {
   try {
-    const { itemName, vendor, catalog, cas, price, unitSize, amount, amountUnit, minStock, maxStock, url, location } = req.body
+    const { itemName, vendor, catalog, cas, price, unitSize, amount, amountUnit, minStock, maxStock, url, location, imageData, modelCid } = req.body
     
     const result = await pool.query(
       `INSERT INTO inventory_items 
-       (user_id, item_name, vendor, catalog, cas, price, unit_size, amount, amount_unit, min_stock, max_stock, url, location) 
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13) 
+       (user_id, item_name, vendor, catalog, cas, price, unit_size, amount, amount_unit, min_stock, max_stock, url, location, image_data, model_cid) 
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15) 
        RETURNING *`,
-      [req.user.userId, itemName, vendor, catalog, cas, price, unitSize, amount, amountUnit, minStock, maxStock, url, location]
+      [req.user.userId, itemName, vendor, catalog, cas, price, unitSize, amount, amountUnit, minStock, maxStock, url, location, imageData, modelCid]
     )
     
     res.status(201).json(result.rows[0])
