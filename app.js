@@ -6,6 +6,8 @@ const inventoryTable = document.getElementById('inventoryTable')
 const itemCount = document.getElementById('itemCount')
 const userInfo = document.getElementById('userInfo')
 const logoutBtn = document.getElementById('logoutBtn')
+const darkModeToggle = document.getElementById('darkModeToggle')
+const darkModeIcon = document.getElementById('darkModeIcon')
 
 let currentUser = null
 
@@ -141,6 +143,27 @@ function escapeHtml(s) {
   return s.toString().replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]))
 }
 
+function initDarkMode() {
+  const savedTheme = localStorage.getItem('theme') || 'light'
+  document.documentElement.setAttribute('data-theme', savedTheme)
+  updateDarkModeIcon(savedTheme)
+}
+
+function toggleDarkMode() {
+  const currentTheme = document.documentElement.getAttribute('data-theme')
+  const newTheme = currentTheme === 'dark' ? 'light' : 'dark'
+  
+  document.documentElement.setAttribute('data-theme', newTheme)
+  localStorage.setItem('theme', newTheme)
+  updateDarkModeIcon(newTheme)
+}
+
+function updateDarkModeIcon(theme) {
+  if (darkModeIcon) {
+    darkModeIcon.textContent = theme === 'dark' ? '☀️' : '🌙'
+  }
+}
+
 async function render3DModelTiny(viewerEl, cid) {
   try {
     if (!cid || !viewerEl) return
@@ -195,6 +218,11 @@ logoutBtn.addEventListener('click', () => {
   window.location.href = 'login.html'
 })
 
+if (darkModeToggle) {
+  darkModeToggle.addEventListener('click', toggleDarkMode)
+}
+
+initDarkMode()
 checkAuth()
 
  

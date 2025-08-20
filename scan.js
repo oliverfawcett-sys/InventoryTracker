@@ -6,8 +6,31 @@ const camera = document.getElementById('camera')
 const cameraControls = document.getElementById('cameraControls')
 const btnCapture = document.getElementById('btnCapture')
 const btnCancelCamera = document.getElementById('btnCancelCamera')
+const darkModeToggle = document.getElementById('darkModeToggle')
+const darkModeIcon = document.getElementById('darkModeIcon')
 
 let stream = null
+
+function initDarkMode() {
+  const savedTheme = localStorage.getItem('theme') || 'light'
+  document.documentElement.setAttribute('data-theme', savedTheme)
+  updateDarkModeIcon(savedTheme)
+}
+
+function toggleDarkMode() {
+  const currentTheme = document.documentElement.getAttribute('data-theme')
+  const newTheme = currentTheme === 'dark' ? 'light' : 'dark'
+  
+  document.documentElement.setAttribute('data-theme', newTheme)
+  localStorage.setItem('theme', newTheme)
+  updateDarkModeIcon(newTheme)
+}
+
+function updateDarkModeIcon(theme) {
+  if (darkModeIcon) {
+    darkModeIcon.textContent = theme === 'dark' ? '☀️' : '🌙'
+  }
+}
 
 // Debug function to check camera support
 function checkCameraSupport() {
@@ -228,6 +251,11 @@ async function lookupNameByCas(cas) {
 
 document.addEventListener('DOMContentLoaded', () => {
   checkAuth()
+  initDarkMode()
+  
+  if (darkModeToggle) {
+    darkModeToggle.addEventListener('click', toggleDarkMode)
+  }
 })
 
 function checkAuth() {

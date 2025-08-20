@@ -23,6 +23,8 @@ const addLocationBtn = document.getElementById('addLocationBtn')
 const formError = document.getElementById('formError')
 
 const viewerEl = document.getElementById('viewer3d-small')
+const darkModeToggle = document.getElementById('darkModeToggle')
+const darkModeIcon = document.getElementById('darkModeIcon')
 let viewer
 let spinHandle = null
 let currentModelCid = null
@@ -98,6 +100,27 @@ function saveItems(items) {
 
 function escapeHtml(s) {
   return s.replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]))
+}
+
+function initDarkMode() {
+  const savedTheme = localStorage.getItem('theme') || 'light'
+  document.documentElement.setAttribute('data-theme', savedTheme)
+  updateDarkModeIcon(savedTheme)
+}
+
+function toggleDarkMode() {
+  const currentTheme = document.documentElement.getAttribute('data-theme')
+  const newTheme = currentTheme === 'dark' ? 'light' : 'dark'
+  
+  document.documentElement.setAttribute('data-theme', newTheme)
+  localStorage.setItem('theme', newTheme)
+  updateDarkModeIcon(newTheme)
+}
+
+function updateDarkModeIcon(theme) {
+  if (darkModeIcon) {
+    darkModeIcon.textContent = theme === 'dark' ? '☀️' : '🌙'
+  }
 }
 
 async function fetchPubChemSummary(query) {
@@ -194,6 +217,11 @@ document.addEventListener('DOMContentLoaded', () => {
   renderLocations()
   renderAmountUnits()
   initViewer()
+  initDarkMode()
+  
+  if (darkModeToggle) {
+    darkModeToggle.addEventListener('click', toggleDarkMode)
+  }
   
   showLookupSection(true)
   

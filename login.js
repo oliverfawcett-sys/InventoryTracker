@@ -3,8 +3,31 @@ const signupForm = document.getElementById('signupForm')
 const signupSection = document.getElementById('signupSection')
 const showSignup = document.getElementById('showSignup')
 const showLogin = document.getElementById('showLogin')
+const darkModeToggle = document.getElementById('darkModeToggle')
+const darkModeIcon = document.getElementById('darkModeIcon')
 
 let currentUser = null
+
+function initDarkMode() {
+  const savedTheme = localStorage.getItem('theme') || 'light'
+  document.documentElement.setAttribute('data-theme', savedTheme)
+  updateDarkModeIcon(savedTheme)
+}
+
+function toggleDarkMode() {
+  const currentTheme = document.documentElement.getAttribute('data-theme')
+  const newTheme = currentTheme === 'dark' ? 'light' : 'dark'
+  
+  document.documentElement.setAttribute('data-theme', newTheme)
+  localStorage.setItem('theme', newTheme)
+  updateDarkModeIcon(newTheme)
+}
+
+function updateDarkModeIcon(theme) {
+  if (darkModeIcon) {
+    darkModeIcon.textContent = theme === 'dark' ? '☀️' : '🌙'
+  }
+}
 
 function checkAuth() {
   const token = localStorage.getItem('authToken')
@@ -96,5 +119,11 @@ signupForm.addEventListener('submit', async (e) => {
     document.getElementById('signupError').textContent = 'Network error. Please try again.'
   }
 })
+
+initDarkMode()
+
+if (darkModeToggle) {
+  darkModeToggle.addEventListener('click', toggleDarkMode)
+}
 
 checkAuth()
