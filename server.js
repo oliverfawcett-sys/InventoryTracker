@@ -4,6 +4,7 @@ const OpenAI = require('openai')
 const bcrypt = require('bcryptjs')
 const jwt = require('jsonwebtoken')
 const { Pool } = require('pg')
+const nodemailer = require('nodemailer')
 
 const app = express()
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 20 * 1024 * 1024 } })
@@ -30,6 +31,32 @@ const pool = new Pool({
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key'
 const RESET_TOKENS = new Map()
+
+let transporter
+
+if (process.env.SENDGRID_API_KEY) {
+  transporter = nodemailer.createTransporter({
+    host: 'smtp.sendgrid.net',
+    port: 587,
+    secure: false,
+    auth: {
+      user: 'apikey',
+      pass: process.env.SENDGRID_API_KEY
+    }
+  })
+  console.log('Using SendGrid for email')
+} else if (process.env.EMAIL_USER && process.env.EMAIL_PASS) {
+  transporter = nodemailer.createTransporter({
+    service: 'gmail',
+    auth: {
+      user: process.env.EMAIL_USER,
+      pass: process.env.EMAIL_PASS
+    }
+  })
+  console.log('Using Gmail SMTP for email')
+} else {
+  console.log('No email configuration found - password reset emails will not work')
+}
 
 async function createTablesIfNotExist() {
   try {
@@ -178,9 +205,83 @@ app.post('/api/auth/forgot-password', async (req, res) => {
       expiresAt: Date.now() + (60 * 60 * 1000)
     })
     
-    console.log(`Password reset requested for ${email}. Reset token: ${resetToken}`)
+    const resetUrl = `${req.protocol}://${req.get('host')}/reset-password.html?token=${resetToken}`
     
-    res.json({ message: 'Password reset link sent to your email' })
+    if (!transporter) {
+      console.error('No email transporter configured')
+      RESET_TOKENS.delete(resetToken)
+      return res.status(500).json({ 
+        message: 'Email service not configured. Please contact support.' 
+      })
+    }
+    
+    const senderName = process.env.EMAIL_SENDER_NAME || 'Inventory Tracker'
+    const senderEmail = process.env.EMAIL_USER || 'noreply@inventorytracker.com'
+    
+    const mailOptions = {
+      from: `"${senderName}" <${senderEmail}>`,
+      to: email,
+      subject: 'Password Reset Request - Inventory Tracker',
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background-color: #f8fafc; padding: 20px;">
+          <div style="background-color: white; border-radius: 12px; padding: 32px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
+            <div style="text-align: center; margin-bottom: 32px;">
+              <h1 style="color: #1e40af; margin: 0; font-size: 28px; font-weight: 700;">🧪 Inventory Tracker</h1>
+              <p style="color: #6b7280; margin: 8px 0 0 0; font-size: 16px;">Lab Equipment Management System</p>
+            </div>
+            
+            <h2 style="color: #1e40af; margin: 0 0 24px 0; font-size: 22px; font-weight: 600;">Password Reset Request</h2>
+            
+            <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 0 0 16px 0;">Hello <strong>${user.name}</strong>,</p>
+            
+            <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 0 0 24px 0;">You recently requested to reset your password for your Inventory Tracker account. Click the button below to set a new password:</p>
+            
+            <div style="text-align: center; margin: 32px 0;">
+              <a href="${resetUrl}" style="background-color: #1e40af; color: white; padding: 16px 32px; text-decoration: none; border-radius: 8px; display: inline-block; font-weight: 600; font-size: 16px; box-shadow: 0 4px 6px rgba(30, 64, 175, 0.2);">Reset Password</a>
+            </div>
+            
+            <div style="background-color: #f3f4f6; border-radius: 8px; padding: 16px; margin: 24px 0;">
+              <p style="color: #6b7280; font-size: 14px; margin: 0; text-align: center;">
+                <strong>⚠️ Security Notice:</strong> This link will expire in 1 hour for your security.
+              </p>
+            </div>
+            
+            <p style="color: #6b7280; font-size: 14px; line-height: 1.5; margin: 0 0 16px 0;">If you didn't request this password reset, please ignore this email. Your password will remain unchanged.</p>
+            
+            <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 24px 0;">
+            
+            <div style="text-align: center;">
+              <p style="color: #9ca3af; font-size: 12px; margin: 0;">Best regards,</p>
+              <p style="color: #1e40af; font-size: 14px; font-weight: 600; margin: 4px 0 0 0;">Inventory Tracker Team</p>
+              <p style="color: #9ca3af; font-size: 12px; margin: 8px 0 0 0;">Lab Equipment Management System</p>
+            </div>
+          </div>
+        </div>
+      `
+    }
+    
+    try {
+      await transporter.sendMail(mailOptions)
+      console.log(`Password reset email sent to ${email}`)
+      res.json({ message: 'Password reset link sent to your email' })
+    } catch (emailError) {
+      console.error('Email sending failed:', emailError)
+      console.error('Email error details:', {
+        code: emailError.code,
+        command: emailError.command,
+        response: emailError.response
+      })
+      RESET_TOKENS.delete(resetToken)
+      
+      if (emailError.code === 'EAUTH') {
+        res.status(500).json({ message: 'Email authentication failed. Check your email credentials.' })
+      } else if (emailError.code === 'ECONNECTION') {
+        res.status(500).json({ message: 'Email connection failed. Please try again later.' })
+      } else {
+        res.status(500).json({ message: 'Failed to send email. Please try again.' })
+      }
+    }
+    
   } catch (error) {
     console.error('Forgot password error:', error)
     res.status(500).json({ message: 'Server error' })
@@ -366,6 +467,10 @@ const port = process.env.PORT || 3000
 app.listen(port, () => {
   console.log(`Server running on port ${port}`)
   console.log('Authentication system ready!')
+  console.log('Email configuration:', {
+    user: process.env.EMAIL_USER ? 'Set' : 'Not set',
+    pass: process.env.EMAIL_PASS ? 'Set' : 'Not set'
+  })
   createTablesIfNotExist()
 })
 
