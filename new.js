@@ -171,6 +171,7 @@ function animateSpin(viewer) {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+  checkAuth()
   ensureDefaultLocations()
   renderLocations()
   renderAmountUnits()
@@ -218,6 +219,16 @@ document.addEventListener('DOMContentLoaded', () => {
   } catch (_) {}
 })
 
+function checkAuth() {
+  const token = localStorage.getItem('authToken')
+  const user = localStorage.getItem('currentUser')
+  
+  if (!token || !user) {
+    window.location.href = 'login.html'
+    return
+  }
+}
+
 lookupForm.addEventListener('submit', async e => {
   e.preventDefault()
   lookupError.textContent = ''
@@ -251,32 +262,48 @@ addLocationBtn.addEventListener('click', () => {
   newLocationInput.value = ''
 })
 
-itemForm.addEventListener('submit', e => {
+itemForm.addEventListener('submit', async e => {
   e.preventDefault()
   formError.textContent = ''
   if (!itemName.value) {
     formError.textContent = 'Item Name is required.'
     return
   }
-  const items = loadItems()
-  const record = {
-    itemName: itemName.value.trim(),
-    vendor: vendor.value.trim(),
-    catalog: catalog.value.trim(),
-    cas: cas.value.trim(),
-    price: price.value ? Number(price.value) : null,
-    unitSize: unitSize.value.trim(),
-    amount: amount.value ? Number(amount.value) : null,
-    amountUnit: amountUnit.value,
-    minStock: minStock.value ? Number(minStock.value) : null,
-    maxStock: maxStock.value ? Number(maxStock.value) : null,
-    url: url.value.trim(),
-    location: locationSelect.value,
-    createdAt: Date.now()
+  
+  try {
+    const token = localStorage.getItem('authToken')
+    const response = await fetch('/api/inventory', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify({
+        itemName: itemName.value.trim(),
+        vendor: vendor.value.trim(),
+        catalog: catalog.value.trim(),
+        cas: cas.value.trim(),
+        price: price.value ? Number(price.value) : null,
+        unitSize: unitSize.value.trim(),
+        amount: amount.value ? Number(amount.value) : null,
+        amountUnit: amountUnit.value,
+        minStock: minStock.value ? Number(minStock.value) : null,
+        maxStock: maxStock.value ? Number(maxStock.value) : null,
+        url: url.value.trim(),
+        location: locationSelect.value
+      })
+    })
+    
+    if (response.ok) {
+      window.location.href = 'index.html'
+    } else {
+      const data = await response.json()
+      formError.textContent = data.message || 'Failed to add item'
+    }
+  } catch (error) {
+    console.error('Submit error:', error)
+    formError.textContent = 'Network error. Please try again.'
   }
-  items.push(record)
-  saveItems(items)
-  window.location.href = 'index.html'
 })
 
 

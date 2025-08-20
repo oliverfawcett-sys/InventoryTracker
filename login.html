@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Login - Inventory Tracker</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="container">
+    <header class="header">
+      <h1>Inventory Tracker</h1>
+    </header>
+
+    <section class="card">
+      <h2>Login</h2>
+      <form id="loginForm" novalidate>
+        <div class="field">
+          <label for="email">Email</label>
+          <input id="email" type="email" required>
+        </div>
+        <div class="field">
+          <label for="password">Password</label>
+          <input id="password" type="password" required>
+        </div>
+        <div class="actions">
+          <button type="submit" class="btn primary">Login</button>
+        </div>
+        <div id="loginError" class="error" role="alert"></div>
+      </form>
+      <div class="meta">
+        <p>Don't have an account? <a href="#" id="showSignup">Sign up</a></p>
+      </div>
+    </section>
+
+    <section class="card" id="signupSection" style="display:none;">
+      <h2>Create Account</h2>
+      <form id="signupForm" novalidate>
+        <div class="field">
+          <label for="signupName">Full Name</label>
+          <input id="signupName" type="text" required>
+        </div>
+        <div class="field">
+          <label for="signupEmail">Email</label>
+          <input id="signupEmail" type="email" required>
+        </div>
+        <div class="field">
+          <label for="signupPassword">Password</label>
+          <input id="signupPassword" type="password" required minlength="8">
+        </div>
+        <div class="field">
+          <label for="confirmPassword">Confirm Password</label>
+          <input id="confirmPassword" type="password" required>
+        </div>
+        <div class="actions">
+          <button type="submit" class="btn primary">Create Account</button>
+        </div>
+        <div id="signupError" class="error" role="alert"></div>
+      </form>
+      <div class="meta">
+        <p>Already have an account? <a href="#" id="showLogin">Login</a></p>
+      </div>
+    </section>
+  </div>
+  <script src="login.js"></script>
+</body>
+</html>

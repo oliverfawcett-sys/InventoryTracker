@@ -116,9 +116,18 @@ btnCancelCamera.addEventListener('click', stopCamera)
 
 async function extractCasAndRedirect(file) {
   try {
+    const token = localStorage.getItem('authToken')
     const form = new FormData()
     form.append('image', file)
-    const res = await fetch('/api/extract-cas', { method: 'POST', body: form })
+    
+    const res = await fetch('/api/extract-cas', { 
+      method: 'POST', 
+      headers: {
+        'Authorization': `Bearer ${token}`
+      },
+      body: form 
+    })
+    
     const data = await res.json()
     
     if (!res.ok) {
@@ -161,6 +170,20 @@ async function lookupNameByCas(cas) {
     return p?.Title || ''
   } catch (_) {
     return ''
+  }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  checkAuth()
+})
+
+function checkAuth() {
+  const token = localStorage.getItem('authToken')
+  const user = localStorage.getItem('currentUser')
+  
+  if (!token || !user) {
+    window.location.href = 'login.html'
+    return
   }
 }
 

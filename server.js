@@ -1,13 +1,144 @@
 const express = require('express')
 const multer = require('multer')
 const OpenAI = require('openai')
+const bcrypt = require('bcryptjs')
+const jwt = require('jsonwebtoken')
+const { Pool } = require('pg')
 
 const app = express()
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 20 * 1024 * 1024 } })
 
+app.use(express.json())
 app.use(express.static(__dirname))
 
-app.post('/api/extract-cas', upload.single('image'), async (req, res) => {
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
+})
+
+const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key'
+
+function authenticateToken(req, res, next) {
+  const authHeader = req.headers['authorization']
+  const token = authHeader && authHeader.split(' ')[1]
+  
+  if (!token) {
+    return res.status(401).json({ message: 'Access token required' })
+  }
+  
+  jwt.verify(token, JWT_SECRET, (err, user) => {
+    if (err) return res.status(403).json({ message: 'Invalid token' })
+    req.user = user
+    next()
+  })
+}
+
+app.post('/api/auth/signup', async (req, res) => {
+  try {
+    const { name, email, password } = req.body
+    
+    const userCheck = await pool.query('SELECT id FROM users WHERE email = $1', [email])
+    if (userCheck.rows.length > 0) {
+      return res.status(400).json({ message: 'Email already registered' })
+    }
+    
+    const hashedPassword = await bcrypt.hash(password, 10)
+    
+    const result = await pool.query(
+      'INSERT INTO users (name, email, password_hash) VALUES ($1, $2, $3) RETURNING id, name, email',
+      [name, email, hashedPassword]
+    )
+    
+    res.status(201).json({ message: 'User created successfully' })
+  } catch (error) {
+    console.error('Signup error:', error)
+    res.status(500).json({ message: 'Server error' })
+  }
+})
+
+app.post('/api/auth/login', async (req, res) => {
+  try {
+    const { email, password } = req.body
+    
+    const result = await pool.query('SELECT * FROM users WHERE email = $1', [email])
+    if (result.rows.length === 0) {
+      return res.status(401).json({ message: 'Invalid credentials' })
+    }
+    
+    const user = result.rows[0]
+    
+    const validPassword = await bcrypt.compare(password, user.password_hash)
+    if (!validPassword) {
+      return res.status(401).json({ message: 'Invalid credentials' })
+    }
+    
+    const token = jwt.sign(
+      { userId: user.id, email: user.email },
+      JWT_SECRET,
+      { expiresIn: '7d' }
+    )
+    
+    res.json({
+      token,
+      user: { id: user.id, name: user.name, email: user.email }
+    })
+  } catch (error) {
+    console.error('Login error:', error)
+    res.status(500).json({ message: 'Server error' })
+  }
+})
+
+app.get('/api/inventory', authenticateToken, async (req, res) => {
+  try {
+    const result = await pool.query(
+      'SELECT * FROM inventory_items WHERE user_id = $1 ORDER BY created_at DESC',
+      [req.user.userId]
+    )
+    res.json(result.rows)
+  } catch (error) {
+    console.error('Get inventory error:', error)
+    res.status(500).json({ message: 'Server error' })
+  }
+})
+
+app.post('/api/inventory', authenticateToken, async (req, res) => {
+  try {
+    const { itemName, vendor, catalog, cas, price, unitSize, amount, amountUnit, minStock, maxStock, url, location } = req.body
+    
+    const result = await pool.query(
+      `INSERT INTO inventory_items 
+       (user_id, item_name, vendor, catalog, cas, price, unit_size, amount, amount_unit, min_stock, max_stock, url, location) 
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13) 
+       RETURNING *`,
+      [req.user.userId, itemName, vendor, catalog, cas, price, unitSize, amount, amountUnit, minStock, maxStock, url, location]
+    )
+    
+    res.status(201).json(result.rows[0])
+  } catch (error) {
+    console.error('Add inventory error:', error)
+    res.status(500).json({ message: 'Server error' })
+  }
+})
+
+app.delete('/api/inventory/:id', authenticateToken, async (req, res) => {
+  try {
+    const result = await pool.query(
+      'DELETE FROM inventory_items WHERE id = $1 AND user_id = $2 RETURNING *',
+      [req.params.id, req.user.userId]
+    )
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({ message: 'Item not found' })
+    }
+    
+    res.json({ message: 'Item deleted' })
+  } catch (error) {
+    console.error('Delete inventory error:', error)
+    res.status(500).json({ message: 'Server error' })
+  }
+})
+
+app.post('/api/extract-cas', authenticateToken, upload.single('image'), async (req, res) => {
   if (!process.env.OPENAI_API_KEY) {
     res.status(500).json({ error: 'OPENAI_API_KEY not set' })
     return
@@ -55,6 +186,9 @@ app.post('/api/extract-cas', upload.single('image'), async (req, res) => {
 })
 
 const port = process.env.PORT || 3000
-app.listen(port, () => {})
+app.listen(port, () => {
+  console.log(`Server running on port ${port}`)
+  console.log('Authentication system ready!')
+})
 
 

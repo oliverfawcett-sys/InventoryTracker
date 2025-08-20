@@ -1,108 +1,131 @@
 const storageKey = 'inventoryItemsV2'
+const locationsKey = 'inventoryLocationsV1'
+
 const searchInput = document.getElementById('searchInput')
 const inventoryTable = document.getElementById('inventoryTable')
 const itemCount = document.getElementById('itemCount')
+const userInfo = document.getElementById('userInfo')
+const logoutBtn = document.getElementById('logoutBtn')
 
-let items = []
-let query = ''
+let currentUser = null
 
-function load() {
-  const raw = localStorage.getItem(storageKey)
-  items = raw ? JSON.parse(raw) : []
-  let changed = false
-  items.forEach(i => {
-    if (!i.id) {
-      i.id = 'itm_' + Math.random().toString(36).slice(2) + Date.now().toString(36)
-      changed = true
-    }
-  })
-  if (changed) save()
-}
-
-function save() {
-  localStorage.setItem(storageKey, JSON.stringify(items))
-}
-
-function normalize(value) {
-  return value.toString().trim().toLowerCase()
-}
-
-function matches(item, q) {
-  if (!q) return true
-  const n = normalize(q)
-  const fields = [
-    item.vendor, item.catalog, item.itemName, item.cas, item.amount, 
-    item.unitSize, item.price, item.location, item.url, item.minStock, item.maxStock
-  ]
-  return fields.filter(Boolean).some(v => normalize(v).includes(n))
-}
-
-function render() {
-  const filtered = items.filter(i => matches(i, query))
-  inventoryTable.innerHTML = ''
-  const frag = document.createDocumentFragment()
+function checkAuth() {
+  const token = localStorage.getItem('authToken')
+  const user = localStorage.getItem('currentUser')
   
-  filtered.forEach(i => {
-    const tr = document.createElement('tr')
-    const cells = [
-      i.vendor || '',
-      i.catalog || '',
-      i.itemName || '',
-      i.cas || '',
-      (i.amount ?? '') + (i.amountUnit ? ' ' + i.amountUnit : ''),
-      i.unitSize || '',
-      typeof i.price === 'number' ? String(i.price) : (i.price || ''),
-      i.location || '',
-      i.url ? 'Link' : '',
-      i.minStock || '',
-      i.maxStock || ''
-    ]
-    
-    cells.forEach((text, idx) => {
-      const td = document.createElement('td')
-      if (idx === 8 && i.url) {
-        const a = document.createElement('a')
-        a.href = i.url
-        a.target = '_blank'
-        a.rel = 'noopener'
-        a.textContent = 'Link'
-        td.appendChild(a)
-      } else {
-        td.textContent = text
+  if (!token || !user) {
+    window.location.href = 'login.html'
+    return
+  }
+  
+  try {
+    currentUser = JSON.parse(user)
+    userInfo.textContent = `Welcome, ${currentUser.name}`
+    loadInventory()
+  } catch (e) {
+    localStorage.removeItem('authToken')
+    localStorage.removeItem('currentUser')
+    window.location.href = 'login.html'
+  }
+}
+
+async function loadInventory() {
+  try {
+    const token = localStorage.getItem('authToken')
+    const response = await fetch('/api/inventory', {
+      headers: {
+        'Authorization': `Bearer ${token}`
       }
-      tr.appendChild(td)
     })
     
-    const tdAction = document.createElement('td')
-    const delBtn = document.createElement('button')
-    delBtn.type = 'button'
-    delBtn.className = 'btn danger'
-    delBtn.textContent = 'Delete'
-    delBtn.addEventListener('click', () => deleteItem(i.id))
-    tdAction.appendChild(delBtn)
-    tr.appendChild(tdAction)
-    frag.appendChild(tr)
-  })
+    if (response.status === 401) {
+      localStorage.removeItem('authToken')
+      localStorage.removeItem('currentUser')
+      window.location.href = 'login.html'
+      return
+    }
+    
+    const items = await response.json()
+    renderInventory(items)
+  } catch (error) {
+    console.error('Failed to load inventory:', error)
+  }
+}
+
+function renderInventory(items) {
+  if (!items || items.length === 0) {
+    inventoryTable.innerHTML = '<tr><td colspan="11" class="text-center">No inventory items found</td></tr>'
+    itemCount.textContent = '0 items'
+    return
+  }
   
-  inventoryTable.appendChild(frag)
-  itemCount.textContent = filtered.length === 1 ? '1 item' : filtered.length + ' items'
+  const filteredItems = searchInput.value ? items.filter(item => 
+    Object.values(item).some(val => 
+      val && val.toString().toLowerCase().includes(searchInput.value.toLowerCase())
+    )
+  ) : items
+  
+  inventoryTable.innerHTML = filteredItems.map(item => `
+    <tr>
+      <td>${escapeHtml(item.item_name || '')}</td>
+      <td>${escapeHtml(item.vendor || '')}</td>
+      <td>${escapeHtml(item.catalog || '')}</td>
+      <td>${escapeHtml(item.cas || '')}</td>
+      <td>${item.amount || ''}</td>
+      <td>${escapeHtml(item.unit_size || '')}</td>
+      <td>${item.price ? `$${item.price}` : ''}</td>
+      <td>${escapeHtml(item.location || '')}</td>
+      <td>${item.url ? `<a href="${escapeHtml(item.url)}" target="_blank">Link</a>` : ''}</td>
+      <td>${item.min_stock || ''}</td>
+      <td>${item.max_stock || ''}</td>
+      <td>
+        <button class="btn danger" onclick="deleteItem(${item.id})">Delete</button>
+      </td>
+    </tr>
+  `).join('')
+  
+  itemCount.textContent = `${filteredItems.length} items`
 }
 
-function deleteItem(id) {
-  items = items.filter(i => i.id !== id)
-  save()
-  render()
+async function deleteItem(id) {
+  if (!confirm('Are you sure you want to delete this item?')) return
+  
+  try {
+    const token = localStorage.getItem('authToken')
+    const response = await fetch(`/api/inventory/${id}`, {
+      method: 'DELETE',
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    })
+    
+    if (response.ok) {
+      loadInventory()
+    } else {
+      alert('Failed to delete item')
+    }
+  } catch (error) {
+    console.error('Delete error:', error)
+    alert('Failed to delete item')
+  }
 }
 
-document.addEventListener('DOMContentLoaded', () => {
-  load()
-  render()
+function escapeHtml(s) {
+  if (!s) return ''
+  return s.toString().replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]))
+}
+
+searchInput.addEventListener('input', () => {
+  loadInventory()
 })
 
-searchInput.addEventListener('input', e => {
-  query = e.target.value
-  render()
+logoutBtn.addEventListener('click', () => {
+  localStorage.removeItem('authToken')
+  localStorage.removeItem('currentUser')
+  window.location.href = 'login.html'
 })
+
+checkAuth()
 
  
 
