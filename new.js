@@ -25,6 +25,7 @@ const formError = document.getElementById('formError')
 const viewerEl = document.getElementById('viewer3d-small')
 let viewer
 let spinHandle = null
+let currentModelCid = null
 
 const defaultUnits = ['mL', 'L', 'g', 'kg', 'mg', 'µL', 'units']
 
@@ -32,6 +33,17 @@ function showLookupSection(show) {
   const lookupSection = document.querySelector('.card:has(#lookupForm)')
   if (lookupSection) {
     lookupSection.style.display = show ? 'block' : 'none'
+  }
+}
+
+function clear3DModel() {
+  if (viewerEl) {
+    viewerEl.innerHTML = ''
+  }
+  currentModelCid = null
+  if (spinHandle) {
+    cancelAnimationFrame(spinHandle)
+    spinHandle = null
   }
 }
 
@@ -138,6 +150,7 @@ function initViewer() {
 async function render3DModel(cid) {
   if (!viewer || !cid) return
   console.log('Rendering 3D model for CID:', cid)
+  currentModelCid = cid
   viewerEl.innerHTML = ''
   viewer = $3Dmol.createViewer(viewerEl, { backgroundColor: '#ffffff' })
   try {
@@ -161,6 +174,7 @@ async function render3DModel(cid) {
     console.log('3D model rendered successfully for CID:', cid)
   } catch (error) {
     console.error('Failed to render 3D model for CID:', cid, error)
+    currentModelCid = null
   }
 }
 
@@ -186,6 +200,7 @@ document.addEventListener('DOMContentLoaded', () => {
   cas.addEventListener('input', () => {
     if (!cas.value.trim()) {
       showLookupSection(true)
+      clear3DModel()
     }
   })
   
@@ -285,12 +300,7 @@ itemForm.addEventListener('submit', async e => {
   try {
     const token = localStorage.getItem('authToken')
     const imageData = localStorage.getItem('scannedImageData') || null
-    let modelCid = null
-    
-    if (viewer && viewer.getModelIds && viewer.getModelIds().length > 0) {
-      modelCid = viewer.getModelIds()[0]
-      console.log('Captured 3D model CID:', modelCid)
-    }
+    const modelCid = currentModelCid
     
     // Check image data size
     if (imageData && imageData.length > 5 * 1024 * 1024) { // 5MB limit
@@ -331,6 +341,7 @@ itemForm.addEventListener('submit', async e => {
       console.log('Item added successfully:', result)
       localStorage.removeItem('scannedImageData')
       localStorage.removeItem('pendingNewItemPopulate')
+      clear3DModel()
       window.location.href = 'index.html'
     } else {
       const data = await response.json()
