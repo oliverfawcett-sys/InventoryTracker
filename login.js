@@ -1,8 +1,15 @@
 const loginForm = document.getElementById('loginForm')
 const signupForm = document.getElementById('signupForm')
 const signupSection = document.getElementById('signupSection')
+const forgotPasswordSection = document.getElementById('forgotPasswordSection')
 const showSignup = document.getElementById('showSignup')
 const showLogin = document.getElementById('showLogin')
+const showForgotPassword = document.getElementById('showForgotPassword')
+const showLoginFromForgot = document.getElementById('showLoginFromForgot')
+const forgotPasswordForm = document.getElementById('forgotPasswordForm')
+const resetEmail = document.getElementById('resetEmail')
+const forgotPasswordError = document.getElementById('forgotPasswordError')
+const forgotPasswordSuccess = document.getElementById('forgotPasswordSuccess')
 const darkModeToggle = document.getElementById('darkModeToggle')
 const darkModeIcon = document.getElementById('darkModeIcon')
 
@@ -53,6 +60,20 @@ showSignup.addEventListener('click', (e) => {
 showLogin.addEventListener('click', (e) => {
   e.preventDefault()
   signupSection.style.display = 'none'
+  forgotPasswordSection.style.display = 'none'
+  document.querySelector('.card:first-of-type').style.display = 'block'
+})
+
+showForgotPassword.addEventListener('click', (e) => {
+  e.preventDefault()
+  document.querySelector('.card:first-of-type').style.display = 'none'
+  signupSection.style.display = 'none'
+  forgotPasswordSection.style.display = 'block'
+})
+
+showLoginFromForgot.addEventListener('click', (e) => {
+  e.preventDefault()
+  forgotPasswordSection.style.display = 'none'
   document.querySelector('.card:first-of-type').style.display = 'block'
 })
 
@@ -115,8 +136,35 @@ signupForm.addEventListener('submit', async (e) => {
     } else {
       document.getElementById('signupError').textContent = data.message || 'Signup failed'
     }
+     } catch (error) {
+     document.getElementById('signupError').textContent = 'Network error. Please try again.'
+   }
+ })
+
+forgotPasswordForm.addEventListener('submit', async (e) => {
+  e.preventDefault()
+  forgotPasswordError.textContent = ''
+  forgotPasswordSuccess.textContent = ''
+  
+  const email = resetEmail.value.trim()
+  
+  try {
+    const response = await fetch('/api/auth/forgot-password', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email })
+    })
+    
+    const data = await response.json()
+    
+    if (response.ok) {
+      forgotPasswordSuccess.textContent = 'Password reset link sent! Check your email.'
+      forgotPasswordForm.reset()
+    } else {
+      forgotPasswordError.textContent = data.message || 'Failed to send reset link'
+    }
   } catch (error) {
-    document.getElementById('signupError').textContent = 'Network error. Please try again.'
+    forgotPasswordError.textContent = 'Network error. Please try again.'
   }
 })
 

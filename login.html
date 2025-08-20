@@ -28,14 +28,15 @@
           <label for="password">Password</label>
           <input id="password" type="password" required>
         </div>
-        <div class="actions">
-          <button type="submit" class="btn primary">Login</button>
-        </div>
-        <div id="loginError" class="error" role="alert"></div>
-      </form>
-      <div class="meta">
-        <p>Don't have an account? <a href="#" id="showSignup">Sign up</a></p>
-      </div>
+                 <div class="actions">
+           <button type="submit" class="btn primary">Login</button>
+         </div>
+         <div id="loginError" class="error" role="alert"></div>
+       </form>
+       <div class="meta">
+         <p>Don't have an account? <a href="#" id="showSignup">Sign up</a></p>
+         <p><a href="#" id="showForgotPassword">Forgot your password?</a></p>
+       </div>
     </section>
 
     <section class="card" id="signupSection" style="display:none;">
@@ -62,11 +63,30 @@
         </div>
         <div id="signupError" class="error" role="alert"></div>
       </form>
-      <div class="meta">
-        <p>Already have an account? <a href="#" id="showLogin">Login</a></p>
-      </div>
-    </section>
-  </div>
-  <script src="login.js"></script>
-</body>
-</html>
+             <div class="meta">
+         <p>Already have an account? <a href="#" id="showLogin">Login</a></p>
+       </div>
+     </section>
+
+     <section class="card" id="forgotPasswordSection" style="display:none;">
+       <h2>Reset Password</h2>
+       <p>Enter your email address and we'll send you a link to reset your password.</p>
+       <form id="forgotPasswordForm" novalidate>
+         <div class="field">
+           <label for="resetEmail">Email</label>
+           <input id="resetEmail" type="email" required>
+         </div>
+         <div class="actions">
+           <button type="submit" class="btn primary">Send Reset Link</button>
+         </div>
+         <div id="forgotPasswordError" class="error" role="alert"></div>
+         <div id="forgotPasswordSuccess" class="success" role="alert"></div>
+       </form>
+       <div class="meta">
+         <p><a href="#" id="showLoginFromForgot">Back to Login</a></p>
+       </div>
+     </section>
+   </div>
+   <script src="login.js"></script>
+ </body>
+ </html>
