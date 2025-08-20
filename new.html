@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Add Inventory Item</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="container">
+    <header class="header">
+      <h1>Add Inventory Item</h1>
+      <a class="btn" href="index.html">Back to Inventory</a>
+    </header>
+
+    <section class="card">
+      <div class="preview-container">
+        <div id="imagePreview" class="image-preview" style="display:none;">
+          <h3>Scanned Image</h3>
+          <img id="scannedImage" alt="Scanned bottle">
+        </div>
+        <div id="viewer3d-small" class="viewer3d-small" aria-label="3D molecular viewer"></div>
+      </div>
+      <h2>Lookup by CAS or Name</h2>
+      <form id="lookupForm" novalidate>
+        <div class="grid">
+          <div class="field">
+            <label for="lookupQuery">CAS or Name</label>
+            <input id="lookupQuery" type="text" autocomplete="off" placeholder="64-17-5 or Ethanol">
+          </div>
+        </div>
+        <div class="actions">
+          <button type="submit" class="btn primary">Lookup</button>
+        </div>
+        <div id="lookupError" class="error" role="alert"></div>
+      </form>
+    </section>
+
+    <section class="card">
+      <h2>Item Details</h2>
+      <form id="itemForm" novalidate>
+        <div class="grid">
+          <div class="field">
+            <label for="itemName">Item Name</label>
+            <input id="itemName" type="text" required>
+          </div>
+          <div class="field">
+            <label for="vendor">Vendor</label>
+            <input id="vendor" type="text">
+          </div>
+          <div class="field">
+            <label for="catalog">Catalog #</label>
+            <input id="catalog" type="text">
+          </div>
+          <div class="field">
+            <label for="cas">CAS Number</label>
+            <input id="cas" type="text" placeholder="12345-67-8">
+          </div>
+          <div class="field">
+            <label for="price">Price</label>
+            <input id="price" type="number" step="0.01" min="0">
+          </div>
+          <div class="field">
+            <label for="unitSize">Unit Size</label>
+            <input id="unitSize" type="text" placeholder="e.g., 500 mL">
+          </div>
+          <div class="field">
+            <label for="amount">Amount in stock</label>
+            <input id="amount" type="number" step="0.01" min="0">
+          </div>
+          <div class="field">
+            <label for="amountUnit">Units</label>
+            <select id="amountUnit"></select>
+          </div>
+          <div class="field">
+            <label for="minStock">Min to stock</label>
+            <input id="minStock" type="number" step="0.01" min="0">
+          </div>
+          <div class="field">
+            <label for="maxStock">Max to stock</label>
+            <input id="maxStock" type="number" step="0.01" min="0">
+          </div>
+          <div class="field">
+            <label for="url">URL</label>
+            <input id="url" type="url" placeholder="https://">
+          </div>
+          <div class="field">
+            <label for="location">Location</label>
+            <div style="display:flex; gap:8px;">
+              <select id="location" style="flex:1 1 auto;"></select>
+              <input id="newLocation" type="text" placeholder="New location" style="flex:1 1 auto;">
+              <button id="addLocationBtn" class="btn" type="button">Add</button>
+            </div>
+          </div>
+        </div>
+        <div class="actions">
+          <button type="submit" class="btn primary">Add to Inventory</button>
+        </div>
+        <div id="formError" class="error" role="alert"></div>
+      </form>
+    </section>
+
+    <footer class="footer">
+      <small>Data is stored locally in your browser.</small>
+    </footer>
+  </div>
+  <script src="https://cdn.jsdelivr.net/npm/3dmol@2.0.4/build/3Dmol-min.js"></script>
+  <script src="new.js"></script>
+</body>
+</html>
+
+

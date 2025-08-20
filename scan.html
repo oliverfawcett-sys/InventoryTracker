@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Scan Bottle</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="container">
+    <header class="header">
+      <h1>Scan Bottle</h1>
+      <a class="btn" href="index.html">Back to Inventory</a>
+    </header>
+
+    <section class="card">
+      <h2>Scan Bottle</h2>
+      <div class="scan-options">
+        <div class="scan-option">
+          <label for="imageInput" class="btn primary">Choose Image File</label>
+          <input id="imageInput" type="file" accept="image/*" style="display:none;">
+        </div>
+        <div class="scan-option">
+          <button class="btn primary" id="btnCamera">Take Photo</button>
+        </div>
+      </div>
+      <div class="meta" id="scanStatus"></div>
+      <div class="lookup-result" id="scanResult"></div>
+    </section>
+    <video id="camera" style="display:none; width:100%; max-width:400px; border-radius:16px; border:2px solid #e5e7eb;"></video>
+    <div id="cameraControls" style="display:none; margin-top:16px;">
+      <button class="btn primary" id="btnCapture">Capture</button>
+      <button class="btn" id="btnCancelCamera">Cancel</button>
+    </div>
+  </div>
+  <script src="scan.js"></script>
+</body>
+</html>
+
+

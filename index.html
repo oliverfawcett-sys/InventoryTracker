@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Lab Equipment Inventory</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="container">
+    <header class="header">
+      <h1>Lab Equipment Inventory</h1>
+    </header>
+
+    <div class="toolbar">
+      <div class="search-wrapper">
+        <input type="text" class="search" id="searchInput" placeholder="Search inventory...">
+      </div>
+      <a href="scan.html" class="btn primary">Add New Entry</a>
+    </div>
+
+    <div class="table-wrapper">
+      <table>
+        <thead>
+          <tr>
+            <th>Vendor</th>
+            <th>Catalog #</th>
+            <th>Item Name</th>
+            <th>CAS</th>
+            <th>Amount</th>
+            <th>Unit Size</th>
+            <th>Price</th>
+            <th>Location</th>
+            <th>URL</th>
+            <th>Min Stock</th>
+            <th>Max Stock</th>
+            <th>Delete</th>
+          </tr>
+        </thead>
+        <tbody id="inventoryTable">
+        </tbody>
+      </table>
+    </div>
+    <div class="footer">
+      <div id="itemCount">0 items</div>
+    </div>
+  </div>
+  <script src="app.js"></script>
+</body>
+</html>
+
+
