@@ -240,6 +240,31 @@ app.post('/api/extract-cas', authenticateToken, upload.single('image'), async (r
   }
 })
 
+app.post('/api/migrate-db', async (req, res) => {
+  try {
+    console.log('Starting database migration...')
+    
+    const addImageDataColumn = `
+      ALTER TABLE inventory_items 
+      ADD COLUMN IF NOT EXISTS image_data TEXT
+    `
+    
+    const addModelCidColumn = `
+      ALTER TABLE inventory_items 
+      ADD COLUMN IF NOT EXISTS model_cid VARCHAR(255)
+    `
+    
+    await pool.query(addImageDataColumn)
+    await pool.query(addModelCidColumn)
+    
+    console.log('Database migration completed!')
+    res.json({ message: 'Database migration completed successfully' })
+  } catch (error) {
+    console.error('Migration error:', error)
+    res.status(500).json({ message: 'Migration failed', error: error.message })
+  }
+})
+
 const port = process.env.PORT || 3000
 app.listen(port, () => {
   console.log(`Server running on port ${port}`)

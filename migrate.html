@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Database Migration - Inventory Tracker</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="container">
+    <header class="header">
+      <h1>Database Migration</h1>
+    </header>
+
+    <section class="card">
+      <h2>Update Database Schema</h2>
+      <p>This will add the missing columns for image data and 3D models to your existing database.</p>
+      <div class="actions">
+        <button id="migrateBtn" class="btn primary">Run Migration</button>
+      </div>
+      <div id="migrationStatus"></div>
+    </section>
+  </div>
+
+  <script>
+    const migrateBtn = document.getElementById('migrateBtn')
+    const migrationStatus = document.getElementById('migrationStatus')
+
+    migrateBtn.addEventListener('click', async () => {
+      try {
+        migrateBtn.disabled = true
+        migrateBtn.textContent = 'Running...'
+        migrationStatus.innerHTML = '<div class="success">Migration started...</div>'
+        
+        const response = await fetch('/api/migrate-db', {
+          method: 'POST'
+        })
+        
+        const data = await response.json()
+        
+        if (response.ok) {
+          migrationStatus.innerHTML = '<div class="success">Migration completed successfully! You can now close this page.</div>'
+        } else {
+          migrationStatus.innerHTML = `<div class="error">Migration failed: ${data.message}</div>`
+        }
+      } catch (error) {
+        migrationStatus.innerHTML = `<div class="error">Migration error: ${error.message}</div>`
+      } finally {
+        migrateBtn.disabled = false
+        migrateBtn.textContent = 'Run Migration'
+      }
+    })
+  </script>
+</body>
+</html>

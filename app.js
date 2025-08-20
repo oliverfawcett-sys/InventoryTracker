@@ -54,7 +54,7 @@ async function loadInventory() {
 
 function renderInventory(items) {
   if (!items || items.length === 0) {
-    inventoryTable.innerHTML = '<tr><td colspan="11" class="text-center">No inventory items found</td></tr>'
+    inventoryTable.innerHTML = '<tr><td colspan="13" class="text-center">No inventory items found</td></tr>'
     itemCount.textContent = '0 items'
     return
   }
