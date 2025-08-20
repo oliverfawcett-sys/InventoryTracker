@@ -197,17 +197,11 @@ document.addEventListener('DOMContentLoaded', () => {
       if (imagePreview && scannedImage) {
         console.log('Found image elements, setting up image display...')
         scannedImage.src = imageData
-        imagePreview.style.display = 'block'
-        imagePreview.style.visibility = 'visible'
-        imagePreview.style.opacity = '1'
-        imagePreview.style.position = 'relative'
-        imagePreview.style.zIndex = '100'
+        imagePreview.style.display = 'flex'
+        imagePreview.classList.add('visible')
         console.log('Image preview element styles:', {
           display: imagePreview.style.display,
-          visibility: imagePreview.style.visibility,
-          opacity: imagePreview.style.opacity,
-          position: imagePreview.style.position,
-          zIndex: imagePreview.style.zIndex
+          className: imagePreview.className
         })
         console.log('Displaying scanned image:', imageData.substring(0, 100) + '...')
       } else {
@@ -218,6 +212,53 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   } catch (error) {
     console.error('Error displaying scanned image:', error)
+  }
+  
+  // Monitor image visibility to ensure it stays displayed
+  setTimeout(() => {
+    const imagePreview = document.getElementById('imagePreview')
+    if (imagePreview) {
+      console.log('Checking image visibility after delay:', {
+        display: imagePreview.style.display,
+        className: imagePreview.className,
+        computedDisplay: window.getComputedStyle(imagePreview).display,
+        computedVisibility: window.getComputedStyle(imagePreview).visibility,
+        computedZIndex: window.getComputedStyle(imagePreview).zIndex
+      })
+      
+      // If image is hidden, force it back to visible
+      if (imagePreview.style.display === 'none' || window.getComputedStyle(imagePreview).display === 'none') {
+        console.log('Image was hidden, forcing it back to visible')
+        imagePreview.style.display = 'flex'
+        imagePreview.classList.add('visible')
+      }
+    }
+  }, 1000)
+  
+  // Watch for DOM changes that might hide the image
+  const imagePreview = document.getElementById('imagePreview')
+  if (imagePreview) {
+    const observer = new MutationObserver((mutations) => {
+      mutations.forEach((mutation) => {
+        if (mutation.type === 'attributes' && mutation.attributeName === 'style') {
+          const display = imagePreview.style.display
+          if (display === 'none') {
+            console.log('Image display changed to none, restoring visibility')
+            setTimeout(() => {
+              imagePreview.style.display = 'flex'
+              imagePreview.classList.add('visible')
+            }, 100)
+          }
+        }
+      })
+    })
+    
+    observer.observe(imagePreview, {
+      attributes: true,
+      attributeFilter: ['style', 'class']
+    })
+    
+    console.log('MutationObserver set up to watch image preview')
   }
   
   try {
