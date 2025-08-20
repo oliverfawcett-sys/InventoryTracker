@@ -28,6 +28,13 @@ let spinHandle = null
 
 const defaultUnits = ['mL', 'L', 'g', 'kg', 'mg', 'µL', 'units']
 
+function showLookupSection(show) {
+  const lookupSection = document.querySelector('.card:has(#lookupForm)')
+  if (lookupSection) {
+    lookupSection.style.display = show ? 'block' : 'none'
+  }
+}
+
 function loadLocations() {
   const raw = localStorage.getItem(locationsKey)
   const list = raw ? JSON.parse(raw) : []
@@ -169,6 +176,14 @@ document.addEventListener('DOMContentLoaded', () => {
   renderAmountUnits()
   initViewer()
   
+  showLookupSection(true)
+  
+  cas.addEventListener('input', () => {
+    if (!cas.value.trim()) {
+      showLookupSection(true)
+    }
+  })
+  
   try {
     const imageData = localStorage.getItem('scannedImageData')
     if (imageData) {
@@ -194,7 +209,10 @@ document.addEventListener('DOMContentLoaded', () => {
         fetchPubChemSummary(p.cas).then(info => {
           if (info.name && !itemName.value) itemName.value = info.name
           if (info.cid) render3DModel(info.cid)
-        }).catch(() => {})
+          showLookupSection(false)
+        }).catch(() => {
+          showLookupSection(true)
+        })
       }
     }
   } catch (_) {}
@@ -213,8 +231,10 @@ lookupForm.addEventListener('submit', async e => {
     if (info.name && !itemName.value) itemName.value = info.name
     if (info.cas && !cas.value) cas.value = info.cas
     if (info.cid) render3DModel(info.cid)
+    showLookupSection(false)
   } catch (_) {
     lookupError.textContent = 'No match found.'
+    showLookupSection(true)
   }
 })
 
