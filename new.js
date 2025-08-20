@@ -137,6 +137,7 @@ function initViewer() {
 
 async function render3DModel(cid) {
   if (!viewer || !cid) return
+  console.log('Rendering 3D model for CID:', cid)
   viewerEl.innerHTML = ''
   viewer = $3Dmol.createViewer(viewerEl, { backgroundColor: '#ffffff' })
   try {
@@ -157,7 +158,10 @@ async function render3DModel(cid) {
     }
     if (viewer) viewer.resize()
     animateSpin(viewer)
-  } catch (_) {}
+    console.log('3D model rendered successfully for CID:', cid)
+  } catch (error) {
+    console.error('Failed to render 3D model for CID:', cid, error)
+  }
 }
 
 function animateSpin(viewer) {
@@ -188,20 +192,21 @@ document.addEventListener('DOMContentLoaded', () => {
   try {
     const imageData = localStorage.getItem('scannedImageData')
     if (imageData) {
-      localStorage.removeItem('scannedImageData')
       const imagePreview = document.getElementById('imagePreview')
       const scannedImage = document.getElementById('scannedImage')
       if (imagePreview && scannedImage) {
         scannedImage.src = imageData
         imagePreview.style.display = 'block'
+        console.log('Displaying scanned image:', imageData.substring(0, 100) + '...')
       }
     }
-  } catch (_) {}
+  } catch (error) {
+    console.error('Error displaying scanned image:', error)
+  }
   
   try {
     const raw = localStorage.getItem('pendingNewItemPopulate')
     if (raw) {
-      localStorage.removeItem('pendingNewItemPopulate')
       const p = JSON.parse(raw)
       if (p?.cas && !cas.value) cas.value = p.cas
       if (typeof p?.amount === 'number' && !Number.isNaN(p.amount)) amount.value = String(p.amount)
@@ -216,7 +221,9 @@ document.addEventListener('DOMContentLoaded', () => {
         })
       }
     }
-  } catch (_) {}
+  } catch (error) {
+    console.error('Error populating pending data:', error)
+  }
 })
 
 function checkAuth() {
@@ -273,7 +280,15 @@ itemForm.addEventListener('submit', async e => {
   try {
     const token = localStorage.getItem('authToken')
     const imageData = localStorage.getItem('scannedImageData') || null
-    const modelCid = viewer ? viewer.getModelIds()[0] : null
+    let modelCid = null
+    
+    if (viewer && viewer.getModelIds && viewer.getModelIds().length > 0) {
+      modelCid = viewer.getModelIds()[0]
+      console.log('Captured 3D model CID:', modelCid)
+    }
+    
+    console.log('Submitting with image data:', imageData ? 'Present' : 'None')
+    console.log('Submitting with model CID:', modelCid)
     
     const response = await fetch('/api/inventory', {
       method: 'POST',
@@ -300,7 +315,10 @@ itemForm.addEventListener('submit', async e => {
     })
     
     if (response.ok) {
+      const result = await response.json()
+      console.log('Item added successfully:', result)
       localStorage.removeItem('scannedImageData')
+      localStorage.removeItem('pendingNewItemPopulate')
       window.location.href = 'index.html'
     } else {
       const data = await response.json()
@@ -311,5 +329,6 @@ itemForm.addEventListener('submit', async e => {
     formError.textContent = 'Network error. Please try again.'
   }
 })
+
 
 

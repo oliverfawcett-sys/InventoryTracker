@@ -138,7 +138,12 @@ async function extractCasAndRedirect(file) {
     
     if (data.cas) {
       const payload = { cas: data.cas, amount: data.massValue ?? null, amountUnit: data.massUnit || null }
-      try { localStorage.setItem('pendingNewItemPopulate', JSON.stringify(payload)) } catch (_) {}
+      try { 
+        localStorage.setItem('pendingNewItemPopulate', JSON.stringify(payload)) 
+        console.log('Stored pending data:', payload)
+      } catch (error) {
+        console.error('Failed to store pending data:', error)
+      }
       scanStatus.textContent = 'Information found! Opening form...'
     } else {
       scanStatus.textContent = 'No information found. Opening empty form...'
@@ -146,12 +151,22 @@ async function extractCasAndRedirect(file) {
     
     const reader = new FileReader()
     reader.onload = function(e) {
-      try { localStorage.setItem('scannedImageData', e.target.result) } catch (_) {}
+      try { 
+        localStorage.setItem('scannedImageData', e.target.result) 
+        console.log('Stored image data, length:', e.target.result.length)
+      } catch (error) {
+        console.error('Failed to store image data:', error)
+      }
     }
     reader.readAsDataURL(file)
     
     setTimeout(() => {
-      try { window.location.href = 'new.html' } catch (_) {}
+      try { 
+        console.log('Redirecting to new.html with image data stored')
+        window.location.href = 'new.html' 
+      } catch (error) {
+        console.error('Failed to redirect:', error)
+      }
     }, 1000)
     
   } catch (e) {
