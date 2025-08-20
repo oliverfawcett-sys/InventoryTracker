@@ -9,6 +9,14 @@ const btnCancelCamera = document.getElementById('btnCancelCamera')
 
 let stream = null
 
+// Debug function to check camera support
+function checkCameraSupport() {
+  console.log('MediaDevices supported:', !!navigator.mediaDevices)
+  console.log('getUserMedia supported:', !!navigator.mediaDevices?.getUserMedia)
+  console.log('Camera element:', camera)
+  console.log('Camera readyState:', camera.readyState)
+}
+
 async function handleFile(file) {
   scanStatus.textContent = 'Scanning bottle...'
   scanResult.textContent = ''
@@ -17,14 +25,41 @@ async function handleFile(file) {
 
 async function startCamera() {
   try {
-    stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
+    scanStatus.textContent = 'Starting camera...'
+    
+    // Check if camera is supported
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      throw new Error('Camera not supported in this browser')
+    }
+    
+    // Request camera access
+    stream = await navigator.mediaDevices.getUserMedia({ 
+      video: { 
+        facingMode: 'environment',
+        width: { ideal: 1280 },
+        height: { ideal: 720 }
+      } 
+    })
+    
+    // Set up video element
     camera.srcObject = stream
     camera.style.display = 'block'
+    
+    // Wait for video to be ready
+    await new Promise((resolve) => {
+      camera.onloadedmetadata = () => resolve()
+    })
+    
+    // Show controls and hide camera button
     cameraControls.style.display = 'block'
     btnCamera.style.display = 'none'
+    
     scanStatus.textContent = 'Camera ready. Position the bottle and click Capture.'
+    console.log('Camera started successfully')
+    
   } catch (e) {
-    scanStatus.textContent = 'Camera access denied. Please use file upload instead.'
+    console.error('Camera error:', e)
+    scanStatus.textContent = `Camera error: ${e.message}. Please use file upload instead.`
   }
 }
 
@@ -40,17 +75,31 @@ function stopCamera() {
 }
 
 async function capturePhoto() {
-  const canvas = document.createElement('canvas')
-  canvas.width = camera.videoWidth
-  canvas.height = camera.videoHeight
-  const ctx = canvas.getContext('2d')
-  ctx.drawImage(camera, 0, 0)
-  
-  canvas.toBlob(async (blob) => {
-    const file = new File([blob], 'camera-photo.jpg', { type: 'image/jpeg' })
-    stopCamera()
-    await extractCasAndRedirect(file)
-  }, 'image/jpeg')
+  try {
+    if (!stream || camera.readyState !== 4) {
+      scanStatus.textContent = 'Camera not ready. Please wait...'
+      return
+    }
+    
+    scanStatus.textContent = 'Capturing photo...'
+    
+    const canvas = document.createElement('canvas')
+    canvas.width = camera.videoWidth
+    canvas.height = camera.videoHeight
+    const ctx = canvas.getContext('2d')
+    ctx.drawImage(camera, 0, 0)
+    
+    canvas.toBlob(async (blob) => {
+      const file = new File([blob], 'camera-photo.jpg', { type: 'image/jpeg' })
+      stopCamera()
+      scanStatus.textContent = 'Processing photo...'
+      await extractCasAndRedirect(file)
+    }, 'image/jpeg', 0.9)
+    
+  } catch (e) {
+    console.error('Capture error:', e)
+    scanStatus.textContent = `Capture failed: ${e.message}`
+  }
 }
 
 imageInput.addEventListener('change', () => {
@@ -58,7 +107,10 @@ imageInput.addEventListener('change', () => {
   if (file) handleFile(file)
 })
 
-btnCamera.addEventListener('click', startCamera)
+btnCamera.addEventListener('click', () => {
+  checkCameraSupport()
+  startCamera()
+})
 btnCapture.addEventListener('click', capturePhoto)
 btnCancelCamera.addEventListener('click', stopCamera)
 
