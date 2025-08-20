@@ -29,6 +29,7 @@ const pool = new Pool({
 })
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key'
+const RESET_TOKENS = new Map()
 
 async function createTablesIfNotExist() {
   try {
@@ -151,6 +152,69 @@ app.post('/api/auth/login', async (req, res) => {
     })
   } catch (error) {
     console.error('Login error:', error)
+    res.status(500).json({ message: 'Server error' })
+  }
+})
+
+app.post('/api/auth/forgot-password', async (req, res) => {
+  try {
+    const { email } = req.body
+    
+    const result = await pool.query('SELECT id, name FROM users WHERE email = $1', [email])
+    if (result.rows.length === 0) {
+      return res.status(404).json({ message: 'Email not found' })
+    }
+    
+    const user = result.rows[0]
+    const resetToken = jwt.sign(
+      { userId: user.id, email: email },
+      JWT_SECRET,
+      { expiresIn: '1h' }
+    )
+    
+    RESET_TOKENS.set(resetToken, {
+      userId: user.id,
+      email: email,
+      expiresAt: Date.now() + (60 * 60 * 1000)
+    })
+    
+    console.log(`Password reset requested for ${email}. Reset token: ${resetToken}`)
+    
+    res.json({ message: 'Password reset link sent to your email' })
+  } catch (error) {
+    console.error('Forgot password error:', error)
+    res.status(500).json({ message: 'Server error' })
+  }
+})
+
+app.post('/api/auth/reset-password', async (req, res) => {
+  try {
+    const { token, newPassword } = req.body
+    
+    const resetData = RESET_TOKENS.get(token)
+    if (!resetData) {
+      return res.status(400).json({ message: 'Invalid or expired reset token' })
+    }
+    
+    if (Date.now() > resetData.expiresAt) {
+      RESET_TOKENS.delete(token)
+      return res.status(400).json({ message: 'Reset token has expired' })
+    }
+    
+    const hashedPassword = await bcrypt.hash(newPassword, 10)
+    
+    await pool.query(
+      'UPDATE users SET password_hash = $1 WHERE id = $2',
+      [hashedPassword, resetData.userId]
+    )
+    
+    RESET_TOKENS.delete(token)
+    
+    console.log(`Password reset successful for user ${resetData.userId}`)
+    
+    res.json({ message: 'Password reset successfully' })
+  } catch (error) {
+    console.error('Reset password error:', error)
     res.status(500).json({ message: 'Server error' })
   }
 })
@@ -286,6 +350,17 @@ app.post('/api/migrate-db', async (req, res) => {
     res.status(500).json({ message: 'Migration failed', error: error.message })
   }
 })
+
+function cleanupExpiredTokens() {
+  const now = Date.now()
+  for (const [token, data] of RESET_TOKENS.entries()) {
+    if (now > data.expiresAt) {
+      RESET_TOKENS.delete(token)
+    }
+  }
+}
+
+setInterval(cleanupExpiredTokens, 5 * 60 * 1000)
 
 const port = process.env.PORT || 3000
 app.listen(port, () => {
