@@ -507,6 +507,18 @@ tbody tr:last-child td {
   margin-bottom: 24px;
 }
 
+.inventory-actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.inventory-actions .btn {
+  min-width: auto;
+  padding: 12px 20px;
+  font-size: 14px;
+}
+
 .location-list h3 {
   margin: 0 0 16px;
   font-size: 16px;
