@@ -35,7 +35,7 @@ const RESET_TOKENS = new Map()
 let transporter
 
 if (process.env.SENDGRID_API_KEY) {
-  transporter = nodemailer.createTransporter({
+  transporter = nodemailer.createTransport({
     host: 'smtp.sendgrid.net',
     port: 587,
     secure: false,
@@ -46,7 +46,7 @@ if (process.env.SENDGRID_API_KEY) {
   })
   console.log('Using SendGrid for email')
 } else if (process.env.EMAIL_USER && process.env.EMAIL_PASS) {
-  transporter = nodemailer.createTransporter({
+  transporter = nodemailer.createTransport({
     service: 'gmail',
     auth: {
       user: process.env.EMAIL_USER,
