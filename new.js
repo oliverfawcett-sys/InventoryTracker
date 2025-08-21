@@ -271,6 +271,14 @@ async function loadInventoryAndLocations() {
     return
   }
 
+  const pendingInventoryId = localStorage.getItem('pendingInventoryId')
+  if (pendingInventoryId) {
+    currentInventoryId = pendingInventoryId
+    console.log('Using pending inventory ID:', currentInventoryId)
+    await loadLocations()
+    return
+  }
+
   try {
     const response = await fetch('/api/inventories', {
       headers: { 'Authorization': `Bearer ${token}` }
@@ -280,6 +288,7 @@ async function loadInventoryAndLocations() {
       const inventories = await response.json()
       if (inventories.length > 0) {
         currentInventoryId = inventories[0].id
+        console.log('Using first inventory ID:', currentInventoryId)
         await loadLocations()
       }
     }
@@ -295,6 +304,14 @@ async function loadInventories() {
     return
   }
 
+  const pendingInventoryId = localStorage.getItem('pendingInventoryId')
+  if (pendingInventoryId) {
+    currentInventoryId = pendingInventoryId
+    console.log('Using pending inventory ID in loadInventories:', currentInventoryId)
+    await loadLocations()
+    return
+  }
+
   try {
     const response = await fetch('/api/inventories', {
       headers: { 'Authorization': `Bearer ${token}` }
@@ -304,6 +321,7 @@ async function loadInventories() {
       const inventories = await response.json()
       if (inventories.length > 0) {
         currentInventoryId = inventories[0].id
+        console.log('Using first inventory ID in loadInventories:', currentInventoryId)
         await loadLocations()
       }
     }
@@ -553,6 +571,7 @@ itemForm.addEventListener('submit', async e => {
       console.log('Item added successfully:', result)
       localStorage.removeItem('scannedImageData')
       localStorage.removeItem('pendingNewItemPopulate')
+      localStorage.removeItem('pendingInventoryId')
       clear3DModel()
       window.location.href = 'index.html'
     } else {
