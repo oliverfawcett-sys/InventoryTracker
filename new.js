@@ -135,13 +135,30 @@ function updateDarkModeIcon(theme) {
 
 async function fetchPubChemSummary(query) {
   const base = 'https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound'
-  const url = `${base}/name/${encodeURIComponent(query.trim())}/JSON`
-  const res = await fetch(url, { headers: { 'Accept': 'application/json' } })
-  if (!res.ok) throw new Error('Lookup failed')
-  const data = await res.json()
-  const record = data?.PC_Compounds?.[0]
-  if (!record) throw new Error('No results')
-  const id = record?.id?.id?.cid
+  // Check if query looks like a CAS number
+  const isCas = /^(\d{1,7}-\d{2}-\d)$/.test(query.trim())
+  
+  let url, res, data, record, id
+  
+  if (isCas) {
+    // Look up by CAS number
+    url = `${base}/cid/${query.trim()}/JSON`
+    res = await fetch(url, { headers: { 'Accept': 'application/json' } })
+    if (!res.ok) throw new Error('CAS lookup failed')
+    data = await res.json()
+    record = data?.PC_Compounds?.[0]
+    if (!record) throw new Error('No results for CAS')
+    id = record?.id?.id?.cid
+  } else {
+    // Look up by name
+    url = `${base}/name/${encodeURIComponent(query.trim())}/JSON`
+    res = await fetch(url, { headers: { 'Accept': 'application/json' } })
+    if (!res.ok) throw new Error('Name lookup failed')
+    data = await res.json()
+    record = data?.PC_Compounds?.[0]
+    if (!record) throw new Error('No results')
+    id = record?.id?.id?.cid
+  }
   let casVal = ''
   let title = ''
   try {
@@ -306,9 +323,10 @@ function renderLocationOptions() {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+  console.log('DOM Content Loaded - Starting initialization...')
   checkAuth()
+  loadInventoryAndLocations()
   ensureDefaultLocations()
-  renderLocations()
   renderAmountUnits()
   initViewer()
   initDarkMode()
@@ -346,26 +364,64 @@ document.addEventListener('DOMContentLoaded', () => {
     console.error('Error displaying scanned image:', error)
   }
   
-  try {
-    const raw = localStorage.getItem('pendingNewItemPopulate')
-    if (raw) {
-      const p = JSON.parse(raw)
-      if (p?.cas && !cas.value) cas.value = p.cas
-      if (typeof p?.amount === 'number' && !Number.isNaN(p.amount)) amount.value = String(p.amount)
-      if (p?.amountUnit) amountUnit.value = p.amountUnit
-      if (p?.cas) {
-        fetchPubChemSummary(p.cas).then(info => {
-          if (info.name && !itemName.value) itemName.value = info.name
-          if (info.cid) render3DModel(info.cid)
-          showLookupSection(false)
-        }).catch(() => {
-          showLookupSection(true)
-        })
+  // Add a small delay to ensure form elements are fully loaded
+  setTimeout(() => {
+    try {
+      const raw = localStorage.getItem('pendingNewItemPopulate')
+      console.log('Found pending data:', raw)
+      if (raw) {
+        const p = JSON.parse(raw)
+        console.log('Parsed pending data:', p)
+        
+        // Check if form elements exist
+        if (!cas || !amount || !amountUnit || !itemName) {
+          console.error('Form elements not found:', { cas: !!cas, amount: !!amount, amountUnit: !!amountUnit, itemName: !!itemName })
+          return
+        }
+        
+        if (p?.cas && !cas.value) {
+          cas.value = p.cas
+          console.log('Set CAS to:', p.cas)
+        }
+        
+        if (p?.amount && p.amount !== null && !Number.isNaN(p.amount)) {
+          amount.value = String(p.amount)
+          console.log('Set amount to:', p.amount)
+        }
+        
+        if (p?.amountUnit && p.amountUnit !== null) {
+          amountUnit.value = p.amountUnit
+          console.log('Set amount unit to:', p.amountUnit)
+        }
+        
+        if (p?.cas) {
+          console.log('Fetching PubChem data for CAS:', p.cas)
+          fetchPubChemSummary(p.cas).then(info => {
+            console.log('PubChem response:', info)
+            if (info.name && !itemName.value) {
+              itemName.value = info.name
+              console.log('Set item name to:', info.name)
+            }
+            if (info.cid) {
+              render3DModel(info.cid)
+              console.log('Rendering 3D model for CID:', info.cid)
+            }
+            showLookupSection(false)
+          }).catch((error) => {
+            console.error('PubChem fetch error:', error)
+            showLookupSection(true)
+          })
+        }
+        
+        // Don't clear the data yet - let the user see it populated
+        console.log('Data populated successfully, keeping pending data for now')
+      } else {
+        console.log('No pending data found')
       }
+    } catch (error) {
+      console.error('Error populating pending data:', error)
     }
-  } catch (error) {
-    console.error('Error populating pending data:', error)
-  }
+  }, 100)
 })
 
 function checkAuth() {

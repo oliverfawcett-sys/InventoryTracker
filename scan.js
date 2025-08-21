@@ -153,6 +153,7 @@ async function extractCasAndRedirect(file) {
     })
     
     const data = await res.json()
+    console.log('API response data:', data)
     
     if (!res.ok) {
       scanStatus.textContent = 'Scan failed: ' + (data.message || 'Server error')
@@ -161,10 +162,20 @@ async function extractCasAndRedirect(file) {
     }
     
     if (data.cas) {
-      const payload = { cas: data.cas, amount: data.massValue ?? null, amountUnit: data.massUnit || null }
+      const payload = { 
+        cas: data.cas, 
+        amount: data.massValue || null, 
+        amountUnit: data.massUnit || null 
+      }
       try { 
         localStorage.setItem('pendingNewItemPopulate', JSON.stringify(payload)) 
         console.log('Stored pending data:', payload)
+        
+        // Verify it was stored correctly
+        const stored = localStorage.getItem('pendingNewItemPopulate')
+        console.log('Verified stored data:', stored)
+        const parsed = JSON.parse(stored)
+        console.log('Verified parsed data:', parsed)
       } catch (error) {
         console.error('Failed to store pending data:', error)
       }
