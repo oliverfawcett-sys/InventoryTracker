@@ -394,12 +394,24 @@ async function deleteLocation(locationId) {
 }
 
 async function createInventory() {
-  const name = inventoryName.value.trim()
-  const description = inventoryDescription.value.trim()
+  const nameInput = document.getElementById('inventoryName')
+  const descriptionInput = document.getElementById('inventoryDescription')
   
-  if (!name) return
+  if (!nameInput || !descriptionInput) {
+    console.error('Form elements not found')
+    return
+  }
+  
+  const name = nameInput.value.trim()
+  const description = descriptionInput.value.trim()
+  
+  if (!name) {
+    alert('Please enter an inventory name')
+    return
+  }
   
   try {
+    console.log('Creating inventory:', { name, description })
     const token = localStorage.getItem('authToken')
     const response = await fetch('/api/inventories', {
       method: 'POST',
@@ -410,8 +422,11 @@ async function createInventory() {
       body: JSON.stringify({ name, description })
     })
     
+    console.log('Create inventory response status:', response.status)
+    
     if (response.ok) {
       const newInventory = await response.json()
+      console.log('New inventory created:', newInventory)
       inventories.push(newInventory)
       renderInventorySelector()
       
@@ -420,20 +435,38 @@ async function createInventory() {
       
       await loadCurrentInventory()
       closeCreateInventoryModal()
+    } else {
+      const errorData = await response.json()
+      console.error('Failed to create inventory:', errorData)
+      alert('Failed to create inventory: ' + (errorData.message || 'Unknown error'))
     }
   } catch (error) {
     console.error('Error creating inventory:', error)
+    alert('Network error. Please try again.')
   }
 }
 
 function openCreateInventoryModal() {
-  createInventoryModal.classList.add('active')
-  inventoryName.focus()
+  console.log('Opening create inventory modal')
+  if (createInventoryModal) {
+    createInventoryModal.classList.add('active')
+    const nameInput = document.getElementById('inventoryName')
+    if (nameInput) {
+      nameInput.focus()
+    }
+  } else {
+    console.error('Modal element not found')
+  }
 }
 
 function closeCreateInventoryModal() {
-  createInventoryModal.classList.remove('active')
-  createInventoryForm.reset()
+  console.log('Closing create inventory modal')
+  if (createInventoryModal) {
+    createInventoryModal.classList.remove('active')
+    if (createInventoryForm) {
+      createInventoryForm.reset()
+    }
+  }
 }
 
 function setupSearch() {
@@ -509,6 +542,7 @@ function setupEventListeners() {
   if (createInventoryForm) {
     createInventoryForm.addEventListener('submit', (e) => {
       e.preventDefault()
+      console.log('Create inventory form submitted')
       createInventory()
     })
   }

@@ -769,12 +769,13 @@ tbody tr:last-child td {
 
 .inventory-selector select {
   padding: 8px 12px;
-  border: 2px solid var(--border-color);
+  border: 2px solid var(--border-primary);
   border-radius: 6px;
-  background: var(--bg-primary);
+  background: var(--bg-secondary);
   color: var(--text-primary);
   font-size: 14px;
   min-width: 200px;
+  font-family: inherit;
 }
 
 .inventory-actions {
@@ -812,8 +813,8 @@ tbody tr:last-child td {
 }
 
 .modal-content {
-  background: var(--bg-primary);
-  border: 2px solid var(--border-color);
+  background: var(--bg-secondary);
+  border: 2px solid var(--border-primary);
   border-radius: 12px;
   padding: 32px;
   max-width: 500px;
@@ -842,10 +843,10 @@ tbody tr:last-child td {
   width: 100%;
   border-collapse: collapse;
   margin-top: 16px;
-  background: var(--bg-primary);
+  background: var(--bg-secondary);
   border-radius: 8px;
   overflow: hidden;
-  border: 2px solid var(--border-color);
+  border: 2px solid var(--border-primary);
 }
 
 .inventory-table th,
@@ -862,7 +863,7 @@ tbody tr:last-child td {
 }
 
 .inventory-table tr:hover {
-  background: var(--bg-hover);
+  background: var(--bg-tertiary);
 }
 
 .inventory-info {
@@ -870,7 +871,7 @@ tbody tr:last-child td {
   padding: 16px;
   border-radius: 8px;
   margin-bottom: 24px;
-  border: 2px solid var(--border-color);
+  border: 2px solid var(--border-primary);
 }
 
 .inventory-info h3 {
@@ -900,16 +901,16 @@ tbody tr:last-child td {
 .search {
   width: 100%;
   padding: 10px 16px;
-  border: 2px solid var(--border-color);
+  border: 2px solid var(--border-primary);
   border-radius: 8px;
-  background: var(--bg-primary);
+  background: var(--bg-secondary);
   color: var(--text-primary);
   font-size: 14px;
 }
 
 .search:focus {
   outline: none;
-  border-color: var(--accent-color);
+  border-color: var(--accent-primary);
 }
 
 .footer {
@@ -918,7 +919,7 @@ tbody tr:last-child td {
   align-items: center;
   margin-top: 24px;
   padding: 16px 0;
-  border-top: 1px solid var(--border-color);
+  border-top: 1px solid var(--border-primary);
   color: var(--text-secondary);
 }
 
