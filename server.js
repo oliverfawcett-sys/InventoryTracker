@@ -655,21 +655,22 @@ app.post('/api/migrate-to-inventories', async (req, res) => {
 
 app.post('/api/clear-all-data', authenticateToken, async (req, res) => {
   try {
-    console.log('Starting data clear operation...')
+    console.log('Starting complete data clear operation...')
     
     const client = await pool.connect()
     
     try {
       await client.query('BEGIN')
       
-      await client.query('DELETE FROM inventory_items WHERE user_id = $1', [req.user.id])
-      await client.query('DELETE FROM locations WHERE user_id = $1', [req.user.id])
-      await client.query('DELETE FROM inventories WHERE user_id = $1', [req.user.id])
+      await client.query('DELETE FROM inventory_items')
+      await client.query('DELETE FROM locations')
+      await client.query('DELETE FROM inventories')
+      await client.query('DELETE FROM users')
       
       await client.query('COMMIT')
       
-      console.log('Data clear operation completed!')
-      res.json({ message: 'All data cleared successfully. You can now start fresh!' })
+      console.log('Complete data clear operation completed!')
+      res.json({ message: 'All data cleared successfully. The entire database has been wiped clean. You can now start completely fresh!' })
     } catch (error) {
       await client.query('ROLLBACK')
       throw error
