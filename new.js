@@ -272,9 +272,12 @@ async function loadInventoryAndLocations() {
   }
 
   const pendingInventoryId = localStorage.getItem('pendingInventoryId')
+  console.log('loadInventoryAndLocations - pendingInventoryId from localStorage:', pendingInventoryId)
+  
   if (pendingInventoryId) {
     currentInventoryId = pendingInventoryId
     console.log('Using pending inventory ID:', currentInventoryId)
+    console.log('Type of currentInventoryId:', typeof currentInventoryId)
     await loadLocations()
     return
   }
@@ -286,6 +289,7 @@ async function loadInventoryAndLocations() {
     
     if (response.ok) {
       const inventories = await response.json()
+      console.log('loadInventoryAndLocations - all inventories:', inventories)
       if (inventories.length > 0) {
         currentInventoryId = inventories[0].id
         console.log('Using first inventory ID:', currentInventoryId)
@@ -337,7 +341,12 @@ async function loadLocations() {
     return
   }
 
-  if (!currentInventoryId) return
+  console.log('loadLocations - currentInventoryId:', currentInventoryId)
+  
+  if (!currentInventoryId) {
+    console.log('loadLocations - no currentInventoryId, returning early')
+    return
+  }
   
   try {
     const response = await fetch(`/api/locations/${currentInventoryId}`, {
@@ -346,7 +355,10 @@ async function loadLocations() {
     
     if (response.ok) {
       currentLocations = await response.json()
+      console.log('loadLocations - loaded locations:', currentLocations)
       renderLocationOptions()
+    } else {
+      console.error('loadLocations - response not ok:', response.status, response.statusText)
     }
   } catch (error) {
     console.error('Error loading locations:', error)
@@ -370,7 +382,6 @@ document.addEventListener('DOMContentLoaded', () => {
   console.log('DOM Content Loaded - Starting initialization...')
   checkAuth()
   loadInventoryAndLocations()
-  ensureDefaultLocations()
   renderAmountUnits()
   initViewer()
   initDarkMode()
@@ -515,15 +526,19 @@ addLocationBtn.addEventListener('click', () => {
 itemForm.addEventListener('submit', async e => {
   e.preventDefault()
   formError.textContent = ''
-     if (!itemName.value) {
-     formError.textContent = 'Item Name is required.'
-     return
-   }
-   
-   if (!currentInventoryId) {
-     formError.textContent = 'No inventory selected. Please go back to the main page and select an inventory.'
-     return
-   }
+  
+  console.log('Form submission - currentInventoryId:', currentInventoryId)
+  console.log('Form submission - pendingInventoryId from localStorage:', localStorage.getItem('pendingInventoryId'))
+  
+  if (!itemName.value) {
+    formError.textContent = 'Item Name is required.'
+    return
+  }
+  
+  if (!currentInventoryId) {
+    formError.textContent = 'No inventory selected. Please go back to the main page and select an inventory.'
+    return
+  }
   
   try {
     const token = localStorage.getItem('authToken')
@@ -547,8 +562,8 @@ itemForm.addEventListener('submit', async e => {
          'Content-Type': 'application/json',
          'Authorization': `Bearer ${token}`
        },
-       body: JSON.stringify({
-         inventoryId: currentInventoryId,
+               body: JSON.stringify({
+          inventoryId: parseInt(currentInventoryId),
          itemName: itemName.value.trim(),
          vendor: vendor.value.trim(),
          catalog: catalog.value.trim(),
