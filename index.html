@@ -3,19 +3,18 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Lab Equipment Inventory</title>
+  <title>Inventory Tracker</title>
   <link rel="stylesheet" href="styles.css">
+  <script src="https://3dmol.csb.pitt.edu/build/3Dmol-min.js"></script>
 </head>
 <body>
   <div class="container">
     <header class="header">
-      <h1>Lab Equipment Inventory</h1>
+      <h1>🧪 Inventory Tracker</h1>
       <div class="header-actions">
-        <button id="darkModeToggle" class="btn" title="Toggle Dark Mode">
+        <button id="darkModeToggle" class="btn secondary" aria-label="Toggle dark mode">
           <span id="darkModeIcon">🌙</span>
         </button>
-        <span id="userInfo" style="margin-right: 16px;"></span>
-        <button id="logoutBtn" class="btn">Logout</button>
       </div>
     </header>
 
@@ -24,78 +23,48 @@
       <button class="nav-tab" data-tab="locations">Locations</button>
       <button class="nav-tab" data-tab="account">Account</button>
     </nav>
-    
+
     <div class="mobile-nav">
       <button class="mobile-nav-toggle" id="mobileNavToggle">
-        <span class="mobile-nav-text">Inventory</span>
-        <span class="mobile-nav-icon">▼</span>
+        <span id="mobileNavText">Inventory</span>
+        <span class="mobile-nav-arrow">▼</span>
       </button>
       <div class="mobile-nav-dropdown" id="mobileNavDropdown">
-        <button class="mobile-nav-item active" data-tab="inventory">Inventory</button>
-        <button class="mobile-nav-item" data-tab="locations">Locations</button>
-        <button class="mobile-nav-item" data-tab="account">Account</button>
+        <div class="mobile-nav-item" data-tab="inventory">Inventory</div>
+        <div class="mobile-nav-item" data-tab="locations">Locations</div>
+        <div class="mobile-nav-item" data-tab="account">Account</div>
       </div>
     </div>
 
     <div id="inventory-tab" class="tab-content active">
-      <div class="card">
-        <h2>Add New Inventory Item</h2>
-        <div class="inventory-actions">
-          <a class="btn primary" href="scan.html">Scan Bottle</a>
-          <a class="btn" href="new.html">Manual Entry</a>
+      <div class="inventory-header">
+        <div class="inventory-selector">
+          <label for="inventorySelect">Select Inventory:</label>
+          <select id="inventorySelect">
+            <option value="">Loading inventories...</option>
+          </select>
+          <button id="createInventoryBtn" class="btn secondary">+ New Inventory</button>
         </div>
-      </div>
-      
-      <div class="toolbar">
-        <div class="search-wrapper">
-          <input type="text" class="search" id="searchInput" placeholder="Search inventory...">
+        <div class="inventory-actions">
+          <button id="scanBottleBtn" class="btn primary">Scan Bottle</button>
+          <button id="manualEntryBtn" class="btn primary">Manual Entry</button>
         </div>
       </div>
 
-      <div class="table-wrapper">
-        <table>
-          <thead>
-            <tr>
-              <th>Item Name</th>
-              <th>Vendor</th>
-              <th>Catalog #</th>
-              <th>CAS</th>
-              <th>Amount</th>
-              <th>Unit Size</th>
-              <th>Price</th>
-              <th>Location</th>
-              <th>URL</th>
-              <th>Min Stock</th>
-              <th>Max Stock</th>
-              <th>Image</th>
-              <th>3D Model</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody id="inventoryTable">
-          </tbody>
-        </table>
-      </div>
-      <div class="footer">
-        <div id="itemCount">0 items</div>
+      <div id="inventoryContent">
+        <div class="empty-state">
+          <p>Select an inventory to view items</p>
+        </div>
       </div>
     </div>
 
     <div id="locations-tab" class="tab-content">
       <div class="card">
         <h2>Manage Locations</h2>
-        <div class="location-form">
-          <div class="field">
-            <label for="newLocationInput">Add New Location</label>
-            <div style="display: flex; gap: 8px;">
-              <input id="newLocationInput" type="text" placeholder="Enter location name">
-              <button id="addLocationBtn" class="btn primary">Add</button>
-            </div>
+        <div id="locationsContent">
+          <div class="empty-state">
+            <p>Select an inventory to manage its locations</p>
           </div>
-        </div>
-        <div class="location-list">
-          <h3>Current Locations</h3>
-          <div id="locationItems"></div>
         </div>
       </div>
     </div>
@@ -103,21 +72,14 @@
     <div id="account-tab" class="tab-content">
       <div class="card">
         <h2>Account Information</h2>
-        <div class="account-info">
-          <div class="field">
-            <label>Name</label>
-            <input id="accountName" type="text" readonly>
-          </div>
-          <div class="field">
-            <label>Email</label>
-            <input id="accountEmail" type="email" readonly>
-          </div>
+        <div id="accountInfo">
+          <p>Loading account information...</p>
         </div>
       </div>
       
       <div class="card">
         <h2>Change Password</h2>
-        <form id="passwordForm">
+        <form id="changePasswordForm">
           <div class="field">
             <label for="currentPassword">Current Password</label>
             <input id="currentPassword" type="password" required>
@@ -127,8 +89,8 @@
             <input id="newPassword" type="password" required minlength="8">
           </div>
           <div class="field">
-            <label for="confirmNewPassword">Confirm New Password</label>
-            <input id="confirmNewPassword" type="password" required minlength="8">
+            <label for="confirmPassword">Confirm New Password</label>
+            <input id="confirmPassword" type="password" required minlength="8">
           </div>
           <div class="actions">
             <button type="submit" class="btn primary">Change Password</button>
@@ -137,9 +99,37 @@
           <div id="passwordSuccess" class="success" role="alert"></div>
         </form>
       </div>
+      
+      <div class="card">
+        <h2>Database Management</h2>
+        <p>Manage your database schema and migrate existing data.</p>
+        <div class="actions">
+          <a href="migrate.html" class="btn secondary">Database Migration</a>
+        </div>
+      </div>
     </div>
   </div>
-  <script src="https://3dmol.csb.pitt.edu/build/3Dmol-min.js"></script>
+
+  <div id="createInventoryModal" class="modal">
+    <div class="modal-content">
+      <h2>Create New Inventory</h2>
+      <form id="createInventoryForm">
+        <div class="field">
+          <label for="inventoryName">Inventory Name</label>
+          <input id="inventoryName" type="text" required placeholder="e.g., Chemistry Lab, Biology Lab">
+        </div>
+        <div class="field">
+          <label for="inventoryDescription">Description (Optional)</label>
+          <textarea id="inventoryDescription" placeholder="Brief description of this inventory"></textarea>
+        </div>
+        <div class="actions">
+          <button type="button" id="cancelCreateInventory" class="btn secondary">Cancel</button>
+          <button type="submit" class="btn primary">Create Inventory</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <script src="app.js"></script>
 </body>
 </html>

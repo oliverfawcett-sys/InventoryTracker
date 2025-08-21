@@ -10,44 +10,85 @@
   <div class="container">
     <header class="header">
       <h1>Database Migration</h1>
+      <div class="header-actions">
+        <a href="index.html" class="btn secondary">Back to Inventory</a>
+      </div>
     </header>
 
     <section class="card">
-      <h2>Update Database Schema</h2>
-      <p>This will add the missing columns for image data and 3D models to your existing database.</p>
-      <div class="actions">
-        <button id="migrateBtn" class="btn primary">Run Migration</button>
-      </div>
-      <div id="migrationStatus"></div>
+      <h2>Database Schema Migration</h2>
+      <p>This will add any missing columns to your database tables.</p>
+      <button id="migrateBtn" class="btn primary">Run Migration</button>
+      <div id="migrateResult"></div>
+    </section>
+
+    <section class="card">
+      <h2>Inventory System Migration</h2>
+      <p>This will migrate your existing inventory items to the new multiple inventory system.</p>
+      <button id="migrateInventoriesBtn" class="btn primary">Migrate to Inventories</button>
+      <div id="migrateInventoriesResult"></div>
     </section>
   </div>
 
   <script>
     const migrateBtn = document.getElementById('migrateBtn')
-    const migrationStatus = document.getElementById('migrationStatus')
+    const migrateInventoriesBtn = document.getElementById('migrateInventoriesBtn')
+    const migrateResult = document.getElementById('migrateResult')
+    const migrateInventoriesResult = document.getElementById('migrateInventoriesResult')
 
     migrateBtn.addEventListener('click', async () => {
       try {
         migrateBtn.disabled = true
         migrateBtn.textContent = 'Running...'
-        migrationStatus.innerHTML = '<div class="success">Migration started...</div>'
         
-        const response = await fetch('/api/migrate-db', {
-          method: 'POST'
-        })
-        
-        const data = await response.json()
+        const response = await fetch('/api/migrate-db', { method: 'POST' })
+        const result = await response.json()
         
         if (response.ok) {
-          migrationStatus.innerHTML = '<div class="success">Migration completed successfully! You can now close this page.</div>'
+          migrateResult.innerHTML = `<div class="success">${result.message}</div>`
         } else {
-          migrationStatus.innerHTML = `<div class="error">Migration failed: ${data.message}</div>`
+          migrateResult.innerHTML = `<div class="error">${result.message}</div>`
         }
       } catch (error) {
-        migrationStatus.innerHTML = `<div class="error">Migration error: ${error.message}</div>`
+        migrateResult.innerHTML = `<div class="error">Error: ${error.message}</div>`
       } finally {
         migrateBtn.disabled = false
         migrateBtn.textContent = 'Run Migration'
+      }
+    })
+
+    migrateInventoriesBtn.addEventListener('click', async () => {
+      try {
+        migrateInventoriesBtn.disabled = true
+        migrateInventoriesBtn.textContent = 'Running...'
+        
+        const token = localStorage.getItem('authToken')
+        if (!token) {
+          migrateInventoriesResult.innerHTML = '<div class="error">Please log in first</div>'
+          return
+        }
+        
+        const response = await fetch('/api/migrate-to-inventories', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({ userId: 1 })
+        })
+        
+        const result = await response.json()
+        
+        if (response.ok) {
+          migrateInventoriesResult.innerHTML = `<div class="success">${result.message}</div>`
+        } else {
+          migrateInventoriesResult.innerHTML = `<div class="error">${result.message}</div>`
+        }
+      } catch (error) {
+        migrateInventoriesResult.innerHTML = `<div class="error">Error: ${error.message}</div>`
+      } finally {
+        migrateInventoriesBtn.disabled = false
+        migrateInventoriesBtn.textContent = 'Migrate to Inventories'
       }
     })
   </script>

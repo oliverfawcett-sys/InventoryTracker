@@ -10,6 +10,7 @@ const darkModeToggle = document.getElementById('darkModeToggle')
 const darkModeIcon = document.getElementById('darkModeIcon')
 
 let stream = null
+let currentInventoryId = null
 
 function initDarkMode() {
   const savedTheme = localStorage.getItem('theme') || 'light'
@@ -249,9 +250,38 @@ async function lookupNameByCas(cas) {
   }
 }
 
+async function loadInventoryAndLocations() {
+  const pendingInventoryId = localStorage.getItem('pendingInventoryId')
+  if (pendingInventoryId) {
+    currentInventoryId = parseInt(pendingInventoryId)
+    localStorage.removeItem('pendingInventoryId')
+  } else {
+    await loadInventories()
+  }
+}
+
+async function loadInventories() {
+  try {
+    const token = localStorage.getItem('authToken')
+    const response = await fetch('/api/inventories', {
+      headers: { 'Authorization': `Bearer ${token}` }
+    })
+    
+    if (response.ok) {
+      const inventories = await response.json()
+      if (inventories.length > 0) {
+        currentInventoryId = inventories[0].id
+      }
+    }
+  } catch (error) {
+    console.error('Error loading inventories:', error)
+  }
+}
+
 document.addEventListener('DOMContentLoaded', () => {
   checkAuth()
   initDarkMode()
+  loadInventoryAndLocations()
   
   if (darkModeToggle) {
     darkModeToggle.addEventListener('click', toggleDarkMode)

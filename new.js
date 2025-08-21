@@ -28,6 +28,8 @@ const darkModeIcon = document.getElementById('darkModeIcon')
 let viewer
 let spinHandle = null
 let currentModelCid = null
+let currentInventoryId = null
+let currentLocations = []
 
 const defaultUnits = ['mL', 'L', 'g', 'kg', 'mg', 'µL', 'units']
 
@@ -217,6 +219,90 @@ function animateSpin(viewer) {
     spinHandle = requestAnimationFrame(step)
   }
   spinHandle = requestAnimationFrame(step)
+}
+
+async function loadInventoryAndLocations() {
+  const token = localStorage.getItem('authToken')
+  if (!token) {
+    window.location.href = 'login.html'
+    return
+  }
+
+  try {
+    const response = await fetch('/api/inventories', {
+      headers: { 'Authorization': `Bearer ${token}` }
+    })
+    
+    if (response.ok) {
+      const inventories = await response.json()
+      if (inventories.length > 0) {
+        currentInventoryId = inventories[0].id
+        await loadLocations()
+      }
+    }
+  } catch (error) {
+    console.error('Error loading inventories:', error)
+  }
+}
+
+async function loadInventories() {
+  const token = localStorage.getItem('authToken')
+  if (!token) {
+    window.location.href = 'login.html'
+    return
+  }
+
+  try {
+    const response = await fetch('/api/inventories', {
+      headers: { 'Authorization': `Bearer ${token}` }
+    })
+    
+    if (response.ok) {
+      const inventories = await response.json()
+      if (inventories.length > 0) {
+        currentInventoryId = inventories[0].id
+        await loadLocations()
+      }
+    }
+  } catch (error) {
+    console.error('Error loading inventories:', error)
+  }
+}
+
+async function loadLocations() {
+  const token = localStorage.getItem('authToken')
+  if (!token) {
+    window.location.href = 'login.html'
+    return
+  }
+
+  if (!currentInventoryId) return
+  
+  try {
+    const response = await fetch(`/api/locations/${currentInventoryId}`, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    })
+    
+    if (response.ok) {
+      currentLocations = await response.json()
+      renderLocationOptions()
+    }
+  } catch (error) {
+    console.error('Error loading locations:', error)
+  }
+}
+
+function renderLocationOptions() {
+  const locationSelect = document.getElementById('location')
+  if (!locationSelect) return
+  
+  locationSelect.innerHTML = '<option value="">Select a location</option>'
+  currentLocations.forEach(location => {
+    const option = document.createElement('option')
+    option.value = location.name
+    option.textContent = location.name
+    locationSelect.appendChild(option)
+  })
 }
 
 document.addEventListener('DOMContentLoaded', () => {

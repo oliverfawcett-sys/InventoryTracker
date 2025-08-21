@@ -72,9 +72,20 @@ async function createTablesIfNotExist() {
       )
     `
     
-    const createInventoryTable = `
+    const createInventoriesTable = `
+      CREATE TABLE IF NOT EXISTS inventories (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+        name VARCHAR(255) NOT NULL,
+        description TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `
+    
+    const createInventoryItemsTable = `
       CREATE TABLE IF NOT EXISTS inventory_items (
         id SERIAL PRIMARY KEY,
+        inventory_id INTEGER REFERENCES inventories(id) ON DELETE CASCADE,
         user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
         item_name VARCHAR(255) NOT NULL,
         vendor VARCHAR(255),
@@ -97,6 +108,7 @@ async function createTablesIfNotExist() {
     const createLocationsTable = `
       CREATE TABLE IF NOT EXISTS locations (
         id SERIAL PRIMARY KEY,
+        inventory_id INTEGER REFERENCES inventories(id) ON DELETE CASCADE,
         user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
         name VARCHAR(255) NOT NULL,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -104,7 +116,8 @@ async function createTablesIfNotExist() {
     `
     
     await pool.query(createUsersTable)
-    await pool.query(createInventoryTable)
+    await pool.query(createInventoriesTable)
+    await pool.query(createInventoryItemsTable)
     await pool.query(createLocationsTable)
     
     console.log('Database tables ready!')
@@ -320,6 +333,122 @@ app.post('/api/auth/reset-password', async (req, res) => {
   }
 })
 
+app.get('/api/inventories', authenticateToken, async (req, res) => {
+  try {
+    const result = await pool.query(
+      'SELECT * FROM inventories WHERE user_id = $1 ORDER BY created_at DESC',
+      [req.user.userId]
+    )
+    res.json(result.rows)
+  } catch (error) {
+    console.error('Get inventories error:', error)
+    res.status(500).json({ message: 'Server error' })
+  }
+})
+
+app.post('/api/inventories', authenticateToken, async (req, res) => {
+  try {
+    const { name, description } = req.body
+    
+    const result = await pool.query(
+      'INSERT INTO inventories (user_id, name, description) VALUES ($1, $2, $3) RETURNING *',
+      [req.user.userId, name, description]
+    )
+    
+    const newInventory = result.rows[0]
+    
+    const defaultLocations = ['Storage Room A', 'Storage Room B', 'Lab Bench 1', 'Lab Bench 2', 'Fridge', 'Freezer']
+    
+    for (const locationName of defaultLocations) {
+      await pool.query(
+        'INSERT INTO locations (inventory_id, user_id, name) VALUES ($1, $2, $3)',
+        [newInventory.id, req.user.userId, locationName]
+      )
+    }
+    
+    res.status(201).json(newInventory)
+  } catch (error) {
+    console.error('Create inventory error:', error)
+    res.status(500).json({ message: 'Server error' })
+  }
+})
+
+app.delete('/api/inventories/:id', authenticateToken, async (req, res) => {
+  try {
+    const result = await pool.query(
+      'DELETE FROM inventories WHERE id = $1 AND user_id = $2 RETURNING *',
+      [req.params.id, req.user.userId]
+    )
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({ message: 'Inventory not found' })
+    }
+    
+    res.json({ message: 'Inventory deleted' })
+  } catch (error) {
+    console.error('Delete inventory error:', error)
+    res.status(500).json({ message: 'Server error' })
+  }
+})
+
+app.get('/api/inventory/:inventoryId', authenticateToken, async (req, res) => {
+  try {
+    const result = await pool.query(
+      'SELECT * FROM inventory_items WHERE inventory_id = $1 AND user_id = $2 ORDER BY created_at DESC',
+      [req.params.inventoryId, req.user.userId]
+    )
+    res.json(result.rows)
+  } catch (error) {
+    console.error('Get inventory error:', error)
+    res.status(500).json({ message: 'Server error' })
+  }
+})
+
+app.get('/api/locations/:inventoryId', authenticateToken, async (req, res) => {
+  try {
+    const result = await pool.query(
+      'SELECT * FROM locations WHERE inventory_id = $1 AND user_id = $2 ORDER BY name',
+      [req.params.inventoryId, req.user.userId]
+    )
+    res.json(result.rows)
+  } catch (error) {
+    console.error('Get locations error:', error)
+    res.status(500).json({ message: 'Server error' })
+  }
+})
+
+app.post('/api/locations/:inventoryId', authenticateToken, async (req, res) => {
+  try {
+    const { name } = req.body
+    const result = await pool.query(
+      'INSERT INTO locations (inventory_id, user_id, name) VALUES ($1, $2, $3) RETURNING *',
+      [req.params.inventoryId, req.user.userId, name]
+    )
+    res.status(201).json(result.rows[0])
+  } catch (error) {
+    console.error('Add location error:', error)
+    res.status(500).json({ message: 'Server error' })
+  }
+})
+
+app.delete('/api/locations/:locationId', authenticateToken, async (req, res) => {
+  try {
+    const result = await pool.query(
+      'DELETE FROM locations WHERE id = $1 AND user_id = $2 RETURNING *',
+      [req.params.locationId, req.user.userId]
+    )
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({ message: 'Location not found' })
+    }
+    
+    res.json({ message: 'Location deleted' })
+  } catch (error) {
+    console.error('Delete location error:', error)
+    res.status(500).json({ message: 'Server error' })
+  }
+})
+
 app.get('/api/inventory', authenticateToken, async (req, res) => {
   try {
     const result = await pool.query(
@@ -335,9 +464,14 @@ app.get('/api/inventory', authenticateToken, async (req, res) => {
 
 app.post('/api/inventory', authenticateToken, async (req, res) => {
   try {
-    const { itemName, vendor, catalog, cas, price, unitSize, amount, amountUnit, minStock, maxStock, url, location, imageData, modelCid } = req.body
+    const { inventoryId, itemName, vendor, catalog, cas, price, unitSize, amount, amountUnit, minStock, maxStock, url, location, imageData, modelCid } = req.body
+    
+    if (!inventoryId) {
+      return res.status(400).json({ message: 'Inventory ID is required' })
+    }
     
     console.log('Adding inventory item:', {
+      inventoryId,
       itemName,
       vendor,
       catalog,
@@ -348,10 +482,10 @@ app.post('/api/inventory', authenticateToken, async (req, res) => {
     
     const result = await pool.query(
       `INSERT INTO inventory_items 
-       (user_id, item_name, vendor, catalog, cas, price, unit_size, amount, amount_unit, min_stock, max_stock, url, location, image_data, model_cid) 
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15) 
+       (inventory_id, user_id, item_name, vendor, catalog, cas, price, unit_size, amount, amount_unit, min_stock, max_stock, url, location, image_data, model_cid) 
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16) 
        RETURNING *`,
-      [req.user.userId, itemName, vendor, catalog, cas, price, unitSize, amount, amountUnit, minStock, maxStock, url, location, imageData, modelCid]
+      [inventoryId, req.user.userId, itemName, vendor, catalog, cas, price, unitSize, amount, amountUnit, minStock, maxStock, url, location, imageData, modelCid]
     )
     
     console.log('Item added successfully with ID:', result.rows[0].id)
@@ -441,14 +575,81 @@ app.post('/api/migrate-db', async (req, res) => {
       ADD COLUMN IF NOT EXISTS model_cid VARCHAR(255)
     `
     
+    const addInventoryIdColumn = `
+      ALTER TABLE inventory_items 
+      ADD COLUMN IF NOT EXISTS inventory_id INTEGER
+    `
+    
     await pool.query(addImageDataColumn)
     await pool.query(addModelCidColumn)
+    await pool.query(addInventoryIdColumn)
     
     console.log('Database migration completed!')
     res.json({ message: 'Database migration completed successfully' })
   } catch (error) {
     console.error('Migration error:', error)
     res.status(500).json({ message: 'Migration failed', error: error.message })
+  }
+})
+
+app.post('/api/migrate-to-inventories', async (req, res) => {
+  try {
+    console.log('Starting inventory migration...')
+    
+    const { userId } = req.body
+    if (!userId) {
+      return res.status(400).json({ message: 'User ID is required' })
+    }
+    
+    const client = await pool.connect()
+    
+    try {
+      await client.query('BEGIN')
+      
+      const createDefaultInventory = `
+        INSERT INTO inventories (user_id, name, description) 
+        VALUES ($1, 'Default Inventory', 'Migrated from existing data') 
+        RETURNING id
+      `
+      
+      const inventoryResult = await client.query(createDefaultInventory, [userId])
+      const inventoryId = inventoryResult.rows[0].id
+      
+      const createDefaultLocations = `
+        INSERT INTO locations (inventory_id, user_id, name) 
+        VALUES ($1, $2, $3)
+      `
+      
+      const defaultLocations = ['Storage Room A', 'Storage Room B', 'Lab Bench 1', 'Lab Bench 2', 'Fridge', 'Freezer']
+      
+      for (const locationName of defaultLocations) {
+        await client.query(createDefaultLocations, [inventoryId, userId, locationName])
+      }
+      
+      const updateExistingItems = `
+        UPDATE inventory_items 
+        SET inventory_id = $1 
+        WHERE user_id = $2 AND inventory_id IS NULL
+      `
+      
+      await client.query(updateExistingItems, [inventoryId, userId])
+      
+      await client.query('COMMIT')
+      
+      console.log('Inventory migration completed!')
+      res.json({ 
+        message: 'Inventory migration completed successfully',
+        inventoryId: inventoryId
+      })
+    } catch (error) {
+      await client.query('ROLLBACK')
+      throw error
+    } finally {
+      client.release()
+    }
+  } catch (error) {
+    console.error('Inventory migration error:', error)
+    res.status(500).json({ message: 'Inventory migration failed', error: error.message })
   }
 })
 

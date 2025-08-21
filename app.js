@@ -26,7 +26,23 @@ const confirmNewPassword = document.getElementById('confirmNewPassword')
 const passwordError = document.getElementById('passwordError')
 const passwordSuccess = document.getElementById('passwordSuccess')
 
+const inventorySelect = document.getElementById('inventorySelect')
+const createInventoryBtn = document.getElementById('createInventoryBtn')
+const createInventoryModal = document.getElementById('createInventoryModal')
+const createInventoryForm = document.getElementById('createInventoryForm')
+const cancelCreateInventory = document.getElementById('cancelCreateInventory')
+const inventoryName = document.getElementById('inventoryName')
+const inventoryDescription = document.getElementById('inventoryDescription')
+const scanBottleBtn = document.getElementById('scanBottleBtn')
+const manualEntryBtn = document.getElementById('manualEntryBtn')
+const inventoryContent = document.getElementById('inventoryContent')
+const locationsContent = document.getElementById('locationsContent')
+
 let currentUser = null
+let currentInventoryId = null
+let inventories = []
+let currentInventoryItems = []
+let currentLocations = []
 
 function checkAuth() {
   const token = localStorage.getItem('authToken')
@@ -419,6 +435,407 @@ document.addEventListener('click', (e) => {
 
 initDarkMode()
 checkAuth()
+
+async function loadInventories() {
+  try {
+    const token = localStorage.getItem('authToken')
+    const response = await fetch('/api/inventories', {
+      headers: { 'Authorization': `Bearer ${token}` }
+    })
+    
+    if (response.ok) {
+      inventories = await response.json()
+      renderInventorySelector()
+      
+      if (inventories.length > 0) {
+        currentInventoryId = inventories[0].id
+        inventorySelect.value = currentInventoryId
+        await loadCurrentInventory()
+      }
+    }
+  } catch (error) {
+    console.error('Error loading inventories:', error)
+  }
+}
+
+function renderInventorySelector() {
+  inventorySelect.innerHTML = ''
+  
+  if (inventories.length === 0) {
+    inventorySelect.innerHTML = '<option value="">No inventories found</option>'
+    return
+  }
+  
+  inventories.forEach(inventory => {
+    const option = document.createElement('option')
+    option.value = inventory.id
+    option.textContent = inventory.name
+    inventorySelect.appendChild(option)
+  })
+}
+
+async function loadCurrentInventory() {
+  if (!currentInventoryId) return
+  
+  await Promise.all([
+    loadInventoryItems(),
+    loadLocations()
+  ])
+}
+
+async function loadInventoryItems() {
+  try {
+    const token = localStorage.getItem('authToken')
+    const response = await fetch(`/api/inventory/${currentInventoryId}`, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    })
+    
+    if (response.ok) {
+      currentInventoryItems = await response.json()
+      renderInventory()
+    }
+  } catch (error) {
+    console.error('Error loading inventory items:', error)
+  }
+}
+
+async function loadLocations() {
+  try {
+    const token = localStorage.getItem('authToken')
+    const response = await fetch(`/api/locations/${currentInventoryId}`, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    })
+    
+    if (response.ok) {
+      currentLocations = await response.json()
+      renderLocations()
+    }
+  } catch (error) {
+    console.error('Error loading locations:', error)
+  }
+}
+
+function renderInventory() {
+  if (!currentInventoryId) {
+    inventoryContent.innerHTML = '<div class="empty-state"><p>Select an inventory to view items</p></div>'
+    return
+  }
+  
+  const currentInventory = inventories.find(inv => inv.id === currentInventoryId)
+  
+  let html = `
+    <div class="inventory-info">
+      <h3>${currentInventory.name}</h3>
+      ${currentInventory.description ? `<p>${currentInventory.description}</p>` : ''}
+    </div>
+  `
+  
+  if (currentInventoryItems.length === 0) {
+    html += '<div class="empty-state"><p>No items in this inventory yet</p></div>'
+  } else {
+    html += `
+      <div class="toolbar">
+        <div class="search-wrapper">
+          <input type="text" class="search" id="searchInput" placeholder="Search inventory...">
+        </div>
+      </div>
+      
+      <div class="table-wrapper">
+        <table class="inventory-table">
+          <thead>
+            <tr>
+              <th>Item Name</th>
+              <th>Vendor</th>
+              <th>Catalog #</th>
+              <th>CAS</th>
+              <th>Amount</th>
+              <th>Unit Size</th>
+              <th>Price</th>
+              <th>Location</th>
+              <th>URL</th>
+              <th>Min Stock</th>
+              <th>Max Stock</th>
+              <th>Image</th>
+              <th>3D Model</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="inventoryTable">
+          </tbody>
+        </table>
+      </div>
+      
+      <div class="footer">
+        <div id="itemCount">${currentInventoryItems.length} items</div>
+      </div>
+    `
+  }
+  
+  inventoryContent.innerHTML = html
+  
+  if (currentInventoryItems.length > 0) {
+    renderInventoryTable()
+    setupSearch()
+  }
+}
+
+function renderInventoryTable() {
+  const tableBody = document.getElementById('inventoryTable')
+  if (!tableBody) return
+  
+  tableBody.innerHTML = currentInventoryItems.map(item => `
+    <tr>
+      <td>${item.item_name || ''}</td>
+      <td>${item.vendor || ''}</td>
+      <td>${item.catalog || ''}</td>
+      <td>${item.cas || ''}</td>
+      <td>${item.amount || ''}</td>
+      <td>${item.amount_unit || ''}</td>
+      <td>${item.price ? `$${item.price}` : ''}</td>
+      <td>${item.location || ''}</td>
+      <td>${item.url ? `<a href="${item.url}" target="_blank">Link</a>` : ''}</td>
+      <td>${item.min_stock || ''}</td>
+      <td>${item.max_stock || ''}</td>
+      <td>${item.image_data ? `<img src="${item.image_data}" alt="Item" style="width: 50px; height: 50px; object-fit: cover;">` : ''}</td>
+      <td>
+        <div id="viewer3d-tiny-${item.id}" class="viewer3d-tiny" data-cid="${item.model_cid || ''}" title="3D Model"></div>
+      </td>
+      <td>
+        <button class="btn secondary" onclick="deleteItem(${item.id})">Delete</button>
+      </td>
+    </tr>
+  `).join('')
+  
+  currentInventoryItems.forEach(item => {
+    if (item.model_cid) {
+      render3DModelTiny(item.id, item.model_cid)
+    }
+  })
+}
+
+function renderLocations() {
+  if (!currentInventoryId) {
+    locationsContent.innerHTML = '<div class="empty-state"><p>Select an inventory to manage its locations</p></div>'
+    return
+  }
+  
+  let html = `
+    <div class="location-form">
+      <div class="field">
+        <label for="newLocationInput">Add New Location</label>
+        <div style="display: flex; gap: 8px;">
+          <input id="newLocationInput" type="text" placeholder="Enter location name">
+          <button id="addLocationBtn" class="btn primary">Add</button>
+        </div>
+      </div>
+    </div>
+    
+    <div class="location-list">
+      <h3>Current Locations</h3>
+      <div id="locationItems"></div>
+    </div>
+  `
+  
+  locationsContent.innerHTML = html
+  
+  renderLocationItems()
+  setupLocationHandlers()
+}
+
+function renderLocationItems() {
+  const locationItems = document.getElementById('locationItems')
+  if (!locationItems) return
+  
+  locationItems.innerHTML = currentLocations.map(location => `
+    <div class="location-item">
+      <span>${location.name}</span>
+      <div class="location-actions">
+        <button class="btn secondary" onclick="deleteLocation(${location.id})">Delete</button>
+      </div>
+    </div>
+  `).join('')
+}
+
+function setupLocationHandlers() {
+  const addLocationBtn = document.getElementById('addLocationBtn')
+  const newLocationInput = document.getElementById('newLocationInput')
+  
+  if (addLocationBtn && newLocationInput) {
+    addLocationBtn.addEventListener('click', addLocation)
+    newLocationInput.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') addLocation()
+    })
+  }
+}
+
+async function addLocation() {
+  const newLocationInput = document.getElementById('newLocationInput')
+  const name = newLocationInput.value.trim()
+  
+  if (!name) return
+  
+  try {
+    const token = localStorage.getItem('authToken')
+    const response = await fetch(`/api/locations/${currentInventoryId}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify({ name })
+    })
+    
+    if (response.ok) {
+      const newLocation = await response.json()
+      currentLocations.push(newLocation)
+      renderLocationItems()
+      newLocationInput.value = ''
+    }
+  } catch (error) {
+    console.error('Error adding location:', error)
+  }
+}
+
+async function deleteLocation(locationId) {
+  try {
+    const token = localStorage.getItem('authToken')
+    const response = await fetch(`/api/locations/${locationId}`, {
+      method: 'DELETE',
+      headers: { 'Authorization': `Bearer ${token}` }
+    })
+    
+    if (response.ok) {
+      currentLocations = currentLocations.filter(loc => loc.id !== locationId)
+      renderLocationItems()
+    }
+  } catch (error) {
+    console.error('Error deleting location:', error)
+  }
+}
+
+async function createInventory() {
+  const name = inventoryName.value.trim()
+  const description = inventoryDescription.value.trim()
+  
+  if (!name) return
+  
+  try {
+    const token = localStorage.getItem('authToken')
+    const response = await fetch('/api/inventories', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify({ name, description })
+    })
+    
+    if (response.ok) {
+      const newInventory = await response.json()
+      inventories.push(newInventory)
+      renderInventorySelector()
+      
+      currentInventoryId = newInventory.id
+      inventorySelect.value = currentInventoryId
+      
+      await loadCurrentInventory()
+      closeCreateInventoryModal()
+    }
+  } catch (error) {
+    console.error('Error creating inventory:', error)
+  }
+}
+
+function openCreateInventoryModal() {
+  createInventoryModal.classList.add('active')
+  inventoryName.focus()
+}
+
+function closeCreateInventoryModal() {
+  createInventoryModal.classList.remove('active')
+  createInventoryForm.reset()
+}
+
+function setupSearch() {
+  const searchInput = document.getElementById('searchInput')
+  if (searchInput) {
+    searchInput.addEventListener('input', (e) => {
+      const searchTerm = e.target.value.toLowerCase()
+      const filteredItems = currentInventoryItems.filter(item =>
+        item.item_name?.toLowerCase().includes(searchTerm) ||
+        item.vendor?.toLowerCase().includes(searchTerm) ||
+        item.cas?.toLowerCase().includes(searchTerm)
+      )
+      renderFilteredInventory(filteredItems)
+    })
+  }
+}
+
+function renderFilteredInventory(filteredItems) {
+  const tableBody = document.getElementById('inventoryTable')
+  if (!tableBody) return
+  
+  tableBody.innerHTML = filteredItems.map(item => `
+    <tr>
+      <td>${item.item_name || ''}</td>
+      <td>${item.vendor || ''}</td>
+      <td>${item.catalog || ''}</td>
+      <td>${item.cas || ''}</td>
+      <td>${item.amount || ''}</td>
+      <td>${item.amount_unit || ''}</td>
+      <td>${item.price ? `$${item.price}` : ''}</td>
+      <td>${item.location || ''}</td>
+      <td>${item.url ? `<a href="${item.url}" target="_blank">Link</a>` : ''}</td>
+      <td>${item.min_stock || ''}</td>
+      <td>${item.max_stock || ''}</td>
+      <td>${item.image_data ? `<img src="${item.image_data}" alt="Item" style="width: 50px; height: 50px; object-fit: cover;">` : ''}</td>
+      <td>
+        <div id="viewer3d-tiny-${item.id}" class="viewer3d-tiny" data-cid="${item.model_cid || ''}" title="3D Model"></div>
+      </td>
+      <td>
+        <button class="btn secondary" onclick="deleteItem(${item.id})">Delete</button>
+      </td>
+    </tr>
+  `).join('')
+  
+  filteredItems.forEach(item => {
+    if (item.model_cid) {
+      render3DModelTiny(item.id, item.model_cid)
+    }
+  })
+}
+
+inventorySelect.addEventListener('change', async (e) => {
+  currentInventoryId = parseInt(e.target.value)
+  if (currentInventoryId) {
+    await loadCurrentInventory()
+  }
+})
+
+createInventoryBtn.addEventListener('click', openCreateInventoryModal)
+cancelCreateInventory.addEventListener('click', closeCreateInventoryModal)
+createInventoryForm.addEventListener('submit', (e) => {
+  e.preventDefault()
+  createInventory()
+})
+
+scanBottleBtn.addEventListener('click', () => {
+  if (currentInventoryId) {
+    localStorage.setItem('pendingInventoryId', currentInventoryId)
+    window.location.href = 'scan.html'
+  } else {
+    alert('Please select an inventory first')
+  }
+})
+
+manualEntryBtn.addEventListener('click', () => {
+  if (currentInventoryId) {
+    localStorage.setItem('pendingInventoryId', currentInventoryId)
+    window.location.href = 'new.html'
+  } else {
+    alert('Please select an inventory first')
+  }
+})
 
  
 
