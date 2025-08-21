@@ -653,6 +653,35 @@ app.post('/api/migrate-to-inventories', async (req, res) => {
   }
 })
 
+app.post('/api/clear-all-data', authenticateToken, async (req, res) => {
+  try {
+    console.log('Starting data clear operation...')
+    
+    const client = await pool.connect()
+    
+    try {
+      await client.query('BEGIN')
+      
+      await client.query('DELETE FROM inventory_items WHERE user_id = $1', [req.user.id])
+      await client.query('DELETE FROM locations WHERE user_id = $1', [req.user.id])
+      await client.query('DELETE FROM inventories WHERE user_id = $1', [req.user.id])
+      
+      await client.query('COMMIT')
+      
+      console.log('Data clear operation completed!')
+      res.json({ message: 'All data cleared successfully. You can now start fresh!' })
+    } catch (error) {
+      await client.query('ROLLBACK')
+      throw error
+    } finally {
+      client.release()
+    }
+  } catch (error) {
+    console.error('Data clear error:', error)
+    res.status(500).json({ message: 'Data clear failed', error: error.message })
+  }
+})
+
 function cleanupExpiredTokens() {
   const now = Date.now()
   for (const [token, data] of RESET_TOKENS.entries()) {

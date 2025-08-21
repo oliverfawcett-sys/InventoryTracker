@@ -28,13 +28,22 @@
       <button id="migrateInventoriesBtn" class="btn primary">Migrate to Inventories</button>
       <div id="migrateInventoriesResult"></div>
     </section>
+    
+    <section class="card">
+      <h2>Clear All Data (Danger Zone)</h2>
+      <p>⚠️ This will permanently delete ALL data from the database. Use only if you want to start completely fresh.</p>
+      <button id="clearAllDataBtn" class="btn danger">Clear All Data</button>
+      <div id="clearAllDataResult"></div>
+    </section>
   </div>
 
   <script>
     const migrateBtn = document.getElementById('migrateBtn')
     const migrateInventoriesBtn = document.getElementById('migrateInventoriesBtn')
+    const clearAllDataBtn = document.getElementById('clearAllDataBtn')
     const migrateResult = document.getElementById('migrateResult')
     const migrateInventoriesResult = document.getElementById('migrateInventoriesResult')
+    const clearAllDataResult = document.getElementById('clearAllDataResult')
 
     migrateBtn.addEventListener('click', async () => {
       try {
@@ -89,6 +98,49 @@
       } finally {
         migrateInventoriesBtn.disabled = false
         migrateInventoriesBtn.textContent = 'Migrate to Inventories'
+      }
+    })
+
+    clearAllDataBtn.addEventListener('click', async () => {
+      if (!confirm('⚠️ WARNING: This will permanently delete ALL data from the database!\n\nThis action cannot be undone. Are you absolutely sure you want to continue?')) {
+        return
+      }
+      
+      try {
+        clearAllDataBtn.disabled = true
+        clearAllDataBtn.textContent = 'Clearing...'
+        
+        const token = localStorage.getItem('authToken')
+        if (!token) {
+          clearAllDataResult.innerHTML = '<div class="error">Please log in first</div>'
+          return
+        }
+        
+        const response = await fetch('/api/clear-all-data', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          }
+        })
+        
+        const result = await response.json()
+        
+        if (response.ok) {
+          clearAllDataResult.innerHTML = `<div class="success">${result.message}</div>`
+          clearAllDataBtn.textContent = 'Data Cleared Successfully'
+        } else {
+          clearAllDataResult.innerHTML = `<div class="error">${result.message}</div>`
+        }
+      } catch (error) {
+        clearAllDataResult.innerHTML = `<div class="error">Error: ${error.message}</div>`
+      } finally {
+        clearAllDataBtn.disabled = false
+        if (clearAllDataResult.innerHTML.includes('success')) {
+          clearAllDataBtn.textContent = 'Data Cleared Successfully'
+        } else {
+          clearAllDataBtn.textContent = 'Clear All Data'
+        }
       }
     })
   </script>
