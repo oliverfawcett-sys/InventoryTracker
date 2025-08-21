@@ -367,26 +367,6 @@ app.post('/api/inventories', authenticateToken, async (req, res) => {
     
     const newInventory = result.rows[0]
     
-    const defaultLocations = ['Storage Room A', 'Storage Room B', 'Lab Bench 1', 'Lab Bench 2', 'Fridge', 'Freezer']
-    
-    try {
-      for (const locationName of defaultLocations) {
-        await pool.query(
-          'INSERT INTO locations (inventory_id, user_id, name) VALUES ($1, $2, $3)',
-          [newInventory.id, req.user.userId, locationName]
-        )
-      }
-    } catch (locationError) {
-      console.error('Error creating default locations:', locationError)
-      if (locationError.message.includes('column "inventory_id" of relation "locations" does not exist')) {
-        console.log('Locations table missing inventory_id column. Please run database migration first.')
-        return res.status(500).json({ 
-          message: 'Database schema needs to be updated. Please run the "Run Migration" button from the Account tab first, then try creating the inventory again.' 
-        })
-      }
-      throw locationError
-    }
-    
     res.status(201).json(newInventory)
   } catch (error) {
     console.error('Create inventory error:', error)
@@ -651,17 +631,6 @@ app.post('/api/migrate-to-inventories', async (req, res) => {
       
       const inventoryResult = await client.query(createDefaultInventory, [userId])
       const inventoryId = inventoryResult.rows[0].id
-      
-      const createDefaultLocations = `
-        INSERT INTO locations (inventory_id, user_id, name) 
-        VALUES ($1, $2, $3)
-      `
-      
-      const defaultLocations = ['Storage Room A', 'Storage Room B', 'Lab Bench 1', 'Lab Bench 2', 'Fridge', 'Freezer']
-      
-      for (const locationName of defaultLocations) {
-        await client.query(createDefaultLocations, [inventoryId, userId, locationName])
-      }
       
       const updateExistingItems = `
         UPDATE inventory_items 
