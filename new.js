@@ -497,10 +497,15 @@ addLocationBtn.addEventListener('click', () => {
 itemForm.addEventListener('submit', async e => {
   e.preventDefault()
   formError.textContent = ''
-  if (!itemName.value) {
-    formError.textContent = 'Item Name is required.'
-    return
-  }
+     if (!itemName.value) {
+     formError.textContent = 'Item Name is required.'
+     return
+   }
+   
+   if (!currentInventoryId) {
+     formError.textContent = 'No inventory selected. Please go back to the main page and select an inventory.'
+     return
+   }
   
   try {
     const token = localStorage.getItem('authToken')
@@ -513,33 +518,35 @@ itemForm.addEventListener('submit', async e => {
       return
     }
     
-    console.log('Submitting with image data:', imageData ? 'Present' : 'None')
-    console.log('Submitting with model CID:', modelCid)
-    console.log('Image data size:', imageData ? `${(imageData.length / 1024).toFixed(1)}KB` : 'None')
+         console.log('Submitting with inventory ID:', currentInventoryId)
+     console.log('Submitting with image data:', imageData ? 'Present' : 'None')
+     console.log('Submitting with model CID:', modelCid)
+     console.log('Image data size:', imageData ? `${(imageData.length / 1024).toFixed(1)}KB` : 'None')
     
-    const response = await fetch('/api/inventory', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
-      },
-      body: JSON.stringify({
-        itemName: itemName.value.trim(),
-        vendor: vendor.value.trim(),
-        catalog: catalog.value.trim(),
-        cas: cas.value.trim(),
-        price: price.value ? Number(price.value) : null,
-        unitSize: unitSize.value.trim(),
-        amount: amount.value ? Number(amount.value) : null,
-        amountUnit: amountUnit.value,
-        minStock: minStock.value ? Number(minStock.value) : null,
-        maxStock: maxStock.value ? Number(maxStock.value) : null,
-        url: url.value.trim(),
-        location: locationSelect.value,
-        imageData: imageData,
-        modelCid: modelCid
-      })
-    })
+         const response = await fetch('/api/inventory', {
+       method: 'POST',
+       headers: {
+         'Content-Type': 'application/json',
+         'Authorization': `Bearer ${token}`
+       },
+       body: JSON.stringify({
+         inventoryId: currentInventoryId,
+         itemName: itemName.value.trim(),
+         vendor: vendor.value.trim(),
+         catalog: catalog.value.trim(),
+         cas: cas.value.trim(),
+         price: price.value ? Number(price.value) : null,
+         unitSize: unitSize.value.trim(),
+         amount: amount.value ? Number(amount.value) : null,
+         amountUnit: amountUnit.value,
+         minStock: minStock.value ? Number(minStock.value) : null,
+         maxStock: maxStock.value ? Number(maxStock.value) : null,
+         url: url.value.trim(),
+         location: locationSelect.value,
+         imageData: imageData,
+         modelCid: modelCid
+       })
+     })
     
     if (response.ok) {
       const result = await response.json()
