@@ -1,5 +1,4 @@
-const storageKey = 'inventoryItemsV2'
-const locationsKey = 'inventoryLocationsV1'
+
 
 const lookupForm = document.getElementById('lookupForm')
 const lookupQueryInput = document.getElementById('lookupQuery')
@@ -51,41 +50,7 @@ function clear3DModel() {
   }
 }
 
-function loadLocations() {
-  const raw = localStorage.getItem(locationsKey)
-  const list = raw ? JSON.parse(raw) : []
-  if (list.length === 0) {
-    const defaultLocations = ['Main Lab', 'Cold Room', 'Chemical Store']
-    saveLocations(defaultLocations)
-    return defaultLocations
-  }
-  return list
-}
 
-function saveLocations(list) {
-  localStorage.setItem(locationsKey, JSON.stringify(list))
-}
-
-function renderLocations() {
-  const list = loadLocations()
-  locationSelect.innerHTML = ''
-  const frag = document.createDocumentFragment()
-  list.forEach(loc => {
-    const opt = document.createElement('option')
-    opt.value = loc
-    opt.textContent = loc
-    frag.appendChild(opt)
-  })
-  locationSelect.appendChild(frag)
-}
-
-function ensureDefaultLocations() {
-  const raw = localStorage.getItem(locationsKey)
-  if (!raw) {
-    const defaultLocations = ['Main Lab', 'Cold Room', 'Chemical Store']
-    saveLocations(defaultLocations)
-  }
-}
 
 function renderAmountUnits() {
   amountUnit.innerHTML = ''
@@ -99,18 +64,9 @@ function renderAmountUnits() {
   amountUnit.appendChild(frag)
 }
 
-function loadItems() {
-  const raw = localStorage.getItem(storageKey)
-  return raw ? JSON.parse(raw) : []
-}
 
-function saveItems(items) {
-  localStorage.setItem(storageKey, JSON.stringify(items))
-}
 
-function escapeHtml(s) {
-  return s.replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]))
-}
+
 
 function initDarkMode() {
   const savedTheme = localStorage.getItem('theme') || 'light'
@@ -278,6 +234,7 @@ async function loadInventoryAndLocations() {
     currentInventoryId = pendingInventoryId
     console.log('Using pending inventory ID:', currentInventoryId)
     console.log('Type of currentInventoryId:', typeof currentInventoryId)
+    console.log('currentInventoryId value:', currentInventoryId)
     await loadLocations()
     return
   }
@@ -301,38 +258,7 @@ async function loadInventoryAndLocations() {
   }
 }
 
-async function loadInventories() {
-  const token = localStorage.getItem('authToken')
-  if (!token) {
-    window.location.href = 'login.html'
-    return
-  }
 
-  const pendingInventoryId = localStorage.getItem('pendingInventoryId')
-  if (pendingInventoryId) {
-    currentInventoryId = pendingInventoryId
-    console.log('Using pending inventory ID in loadInventories:', currentInventoryId)
-    await loadLocations()
-    return
-  }
-
-  try {
-    const response = await fetch('/api/inventories', {
-      headers: { 'Authorization': `Bearer ${token}` }
-    })
-    
-    if (response.ok) {
-      const inventories = await response.json()
-      if (inventories.length > 0) {
-        currentInventoryId = inventories[0].id
-        console.log('Using first inventory ID in loadInventories:', currentInventoryId)
-        await loadLocations()
-      }
-    }
-  } catch (error) {
-    console.error('Error loading inventories:', error)
-  }
-}
 
 async function loadLocations() {
   const token = localStorage.getItem('authToken')
@@ -510,17 +436,37 @@ lookupForm.addEventListener('submit', async e => {
   }
 })
 
-addLocationBtn.addEventListener('click', () => {
+addLocationBtn.addEventListener('click', async () => {
   const name = (newLocationInput.value || '').trim()
   if (!name) return
-  const list = loadLocations()
-  if (!list.includes(name)) {
-    list.push(name)
-    saveLocations(list)
-    renderLocations()
-    locationSelect.value = name
+  
+  if (!currentInventoryId) {
+    console.error('No inventory ID available for adding location')
+    return
   }
-  newLocationInput.value = ''
+  
+  try {
+    const token = localStorage.getItem('authToken')
+    const response = await fetch(`/api/locations/${currentInventoryId}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify({ name })
+    })
+    
+    if (response.ok) {
+      console.log('Location added successfully')
+      await loadLocations()
+      locationSelect.value = name
+      newLocationInput.value = ''
+    } else {
+      console.error('Failed to add location:', response.status)
+    }
+  } catch (error) {
+    console.error('Error adding location:', error)
+  }
 })
 
 itemForm.addEventListener('submit', async e => {
@@ -563,7 +509,7 @@ itemForm.addEventListener('submit', async e => {
          'Authorization': `Bearer ${token}`
        },
                body: JSON.stringify({
-          inventoryId: parseInt(currentInventoryId),
+          inventoryId: Number(currentInventoryId),
          itemName: itemName.value.trim(),
          vendor: vendor.value.trim(),
          catalog: catalog.value.trim(),
