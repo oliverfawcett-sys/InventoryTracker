@@ -74,23 +74,45 @@ body {
 
 .header {
   margin-bottom: 32px;
-  text-align: center;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 0 16px;
+  border-bottom: 1px solid var(--border-primary);
+}
+
+.header-brand {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
 }
 
 .header h1 {
-  margin: 0 0 8px;
+  margin: 0;
   font-size: 2rem;
   font-weight: 600;
   color: var(--text-primary);
   letter-spacing: -0.01em;
 }
 
+.logo {
+  height: 40px;
+  width: auto;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  transition: all 0.3s ease;
+  filter: brightness(0.9);
+}
+
+.logo:hover {
+  transform: scale(1.05);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
 .header-actions {
   display: flex;
   align-items: center;
-  justify-content: center;
   gap: 12px;
-  margin-top: 16px;
 }
 
 .card {
@@ -469,6 +491,15 @@ tbody tr:last-child td {
 
 [data-theme="dark"] #darkModeIcon {
   transform: rotate(180deg);
+}
+
+[data-theme="dark"] .logo {
+  filter: brightness(1.1) contrast(1.1);
+  box-shadow: 0 2px 8px rgba(255, 255, 255, 0.1);
+}
+
+[data-theme="dark"] .logo:hover {
+  box-shadow: 0 4px 12px rgba(255, 255, 255, 0.15);
 }
 
 .nav-tabs {

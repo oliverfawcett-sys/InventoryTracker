@@ -23,24 +23,24 @@ let currentInventoryItems = []
 let currentLocations = []
 
 function initDarkMode() {
-  const isDark = localStorage.getItem('darkMode') === 'true'
-  if (isDark) {
-    document.documentElement.setAttribute('data-theme', 'dark')
-    updateDarkModeIcon()
-  }
+  const savedTheme = localStorage.getItem('theme') || 'light'
+  document.documentElement.setAttribute('data-theme', savedTheme)
+  updateDarkModeIcon()
 }
 
 function toggleDarkMode() {
-  const isDark = document.documentElement.getAttribute('data-theme') === 'dark'
-  document.documentElement.setAttribute('data-theme', isDark ? 'light' : 'dark')
-  localStorage.setItem('darkMode', (!isDark).toString())
+  const currentTheme = document.documentElement.getAttribute('data-theme')
+  const newTheme = currentTheme === 'dark' ? 'light' : 'dark'
+  
+  document.documentElement.setAttribute('data-theme', newTheme)
+  localStorage.setItem('theme', newTheme)
   updateDarkModeIcon()
 }
 
 function updateDarkModeIcon() {
-  const isDark = document.documentElement.getAttribute('data-theme') === 'dark'
+  const currentTheme = document.documentElement.getAttribute('data-theme')
   if (darkModeIcon) {
-    darkModeIcon.textContent = isDark ? '☀️' : '🌙'
+    darkModeIcon.textContent = currentTheme === 'dark' ? '☀️' : '🌙'
   }
 }
 
@@ -49,43 +49,58 @@ if (darkModeToggle) {
 }
 
 async function checkAuth() {
+  console.log('Checking authentication...')
   const token = localStorage.getItem('authToken')
+  console.log('Token found:', !!token)
+  
   if (!token) {
+    console.log('No token found, redirecting to login')
     window.location.href = 'login.html'
     return
   }
   
   try {
-    const response = await fetch('/api/auth/verify', {
-      headers: { 'Authorization': `Bearer ${token}` }
-    })
+    const user = localStorage.getItem('currentUser')
+    console.log('User found:', !!user)
     
-    if (!response.ok) {
+    if (user) {
+      currentUser = JSON.parse(user)
+      console.log('Current user:', currentUser)
+    } else {
+      console.log('No user found, redirecting to login')
       localStorage.removeItem('authToken')
       window.location.href = 'login.html'
       return
     }
     
-    const userData = await response.json()
-    currentUser = userData.user
+    console.log('Loading inventories...')
     await loadInventories()
+    console.log('Loading account info...')
     await loadAccountInfo()
+    console.log('Authentication successful')
   } catch (error) {
     console.error('Auth check error:', error)
     localStorage.removeItem('authToken')
+    localStorage.removeItem('currentUser')
     window.location.href = 'login.html'
   }
 }
 
 async function loadInventories() {
   try {
+    console.log('Loading inventories...')
     const token = localStorage.getItem('authToken')
+    console.log('Using token:', !!token)
+    
     const response = await fetch('/api/inventories', {
       headers: { 'Authorization': `Bearer ${token}` }
     })
     
+    console.log('Inventories response status:', response.status)
+    
     if (response.ok) {
       inventories = await response.json()
+      console.log('Inventories loaded:', inventories.length)
       renderInventorySelector()
       
       if (inventories.length > 0) {
@@ -93,6 +108,8 @@ async function loadInventories() {
         inventorySelect.value = currentInventoryId
         await loadCurrentInventory()
       }
+    } else {
+      console.error('Failed to load inventories:', response.status, response.statusText)
     }
   } catch (error) {
     console.error('Error loading inventories:', error)
@@ -101,23 +118,17 @@ async function loadInventories() {
 
 async function loadAccountInfo() {
   try {
-    const token = localStorage.getItem('authToken')
-    const response = await fetch('/api/auth/verify', {
-      headers: { 'Authorization': `Bearer ${token}` }
-    })
-    
-    if (response.ok) {
-      const userData = await response.json()
+    if (currentUser) {
       const accountInfo = document.getElementById('accountInfo')
       if (accountInfo) {
         accountInfo.innerHTML = `
           <div class="field">
             <label>Name</label>
-            <input type="text" value="${userData.user.name}" readonly>
+            <input type="text" value="${currentUser.name}" readonly>
           </div>
           <div class="field">
             <label>Email</label>
-            <input type="email" value="${userData.user.email}" readonly>
+            <input type="email" value="${currentUser.email}" readonly>
           </div>
         `
       }
@@ -684,9 +695,13 @@ function switchTab(tabName) {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-  initDarkMode()
-  setupEventListeners()
-  checkAuth()
+  try {
+    initDarkMode()
+    setupEventListeners()
+    checkAuth()
+  } catch (error) {
+    console.error('Initialization error:', error)
+  }
 })
 
 
