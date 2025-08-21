@@ -14,8 +14,6 @@ const inventoryName = document.getElementById('inventoryName')
 const inventoryDescription = document.getElementById('inventoryDescription')
 const scanBottleBtn = document.getElementById('scanBottleBtn')
 const manualEntryBtn = document.getElementById('manualEntryBtn')
-const inventoryContent = document.getElementById('inventoryContent')
-const locationsContent = document.getElementById('locationsContent')
 
 const detailTabs = document.querySelectorAll('.detail-tab')
 const detailTabContents = document.querySelectorAll('.detail-tab-content')
@@ -167,24 +165,38 @@ function renderInventoriesList() {
 }
 
 async function loadCurrentInventory() {
-  if (!currentInventoryId) return
+  console.log('loadCurrentInventory called with currentInventoryId:', currentInventoryId)
   
+  if (!currentInventoryId) {
+    console.log('No currentInventoryId, returning early')
+    return
+  }
+  
+  console.log('Loading inventory items and locations...')
   await Promise.all([
     loadInventoryItems(),
     loadLocations()
   ])
+  console.log('Finished loading current inventory')
 }
 
 async function loadInventoryItems() {
   try {
+    console.log('Loading inventory items for inventory ID:', currentInventoryId)
     const token = localStorage.getItem('authToken')
     const response = await fetch(`/api/inventory/${currentInventoryId}`, {
       headers: { 'Authorization': `Bearer ${token}` }
     })
     
+    console.log('Inventory items response status:', response.status)
+    
     if (response.ok) {
       currentInventoryItems = await response.json()
+      console.log('Inventory items loaded:', currentInventoryItems.length)
+      console.log('Items:', currentInventoryItems)
       renderInventory()
+    } else {
+      console.error('Failed to load inventory items:', response.status, response.statusText)
     }
   } catch (error) {
     console.error('Error loading inventory items:', error)
@@ -208,12 +220,30 @@ async function loadLocations() {
 }
 
 function renderInventory() {
+  console.log('renderInventory called with currentInventoryId:', currentInventoryId)
+  
+  // Get the inventoryContent element from the current view
+  const inventoryContent = document.getElementById('inventoryContent')
+  console.log('inventoryContent element:', inventoryContent)
+  
+  if (!inventoryContent) {
+    console.log('inventoryContent element not found, returning early')
+    return
+  }
+  
   if (!currentInventoryId) {
+    console.log('No currentInventoryId, showing empty state')
     inventoryContent.innerHTML = '<div class="empty-state"><p>Select an inventory to view items</p></div>'
     return
   }
   
   const currentInventory = inventories.find(inv => inv.id === currentInventoryId)
+  console.log('Current inventory found:', currentInventory)
+  
+  if (!currentInventory) {
+    console.log('No current inventory found')
+    return
+  }
   
   let html = `
     <div class="inventory-info">
@@ -273,7 +303,12 @@ function renderInventory() {
 
 function renderInventoryTable() {
   const tableBody = document.getElementById('inventoryTable')
-  if (!tableBody) return
+  if (!tableBody) {
+    console.log('inventoryTable element not found')
+    return
+  }
+  
+  console.log('Rendering inventory table with', currentInventoryItems.length, 'items')
   
   tableBody.innerHTML = currentInventoryItems.map(item => `
     <tr>
@@ -314,6 +349,14 @@ function renderInventoryTable() {
 }
 
 function renderLocations() {
+  // Get the locationsContent element from the current view
+  const locationsContent = document.getElementById('locationsContent')
+  
+  if (!locationsContent) {
+    console.log('locationsContent element not found, returning early')
+    return
+  }
+  
   if (!currentInventoryId) {
     locationsContent.innerHTML = '<div class="empty-state"><p>Select an inventory to manage its locations</p></div>'
     return
@@ -516,6 +559,7 @@ function closeCreateInventoryModal() {
 function setupSearch() {
   const searchInput = document.getElementById('searchInput')
   if (searchInput) {
+    console.log('Setting up search functionality')
     searchInput.addEventListener('input', (e) => {
       const searchTerm = e.target.value.toLowerCase()
       const filteredItems = currentInventoryItems.filter(item =>
@@ -523,14 +567,22 @@ function setupSearch() {
         item.vendor?.toLowerCase().includes(searchTerm) ||
         item.cas?.toLowerCase().includes(searchTerm)
       )
+      console.log('Search term:', searchTerm, 'Filtered items:', filteredItems.length)
       renderFilteredInventory(filteredItems)
     })
+  } else {
+    console.log('Search input not found')
   }
 }
 
 function renderFilteredInventory(filteredItems) {
   const tableBody = document.getElementById('inventoryTable')
-  if (!tableBody) return
+  if (!tableBody) {
+    console.log('inventoryTable element not found in renderFilteredInventory')
+    return
+  }
+  
+  console.log('Rendering filtered inventory with', filteredItems.length, 'items')
   
   tableBody.innerHTML = filteredItems.map(item => `
     <tr>
@@ -573,11 +625,11 @@ function renderFilteredInventory(filteredItems) {
 function setupEventListeners() {
   // Sidebar navigation
   if (inventoriesBtn) {
-    inventoriesBtn.addEventListener('click', () => showView('inventories'))
+    inventoriesBtn.addEventListener('click', () => showView('inventories-view'))
   }
   
   if (accountBtn) {
-    accountBtn.addEventListener('click', () => showView('account'))
+    accountBtn.addEventListener('click', () => showView('account-view'))
   }
   
   if (logoutBtn) {
@@ -589,7 +641,7 @@ function setupEventListeners() {
   }
   
   if (backToInventoriesBtn) {
-    backToInventoriesBtn.addEventListener('click', () => showView('inventories'))
+    backToInventoriesBtn.addEventListener('click', () => showView('inventories-view'))
   }
   
   // Detail tabs
@@ -799,7 +851,7 @@ function showView(viewName) {
   })
   
   // Show selected view
-  const selectedView = document.getElementById(`${viewName}-view`)
+  const selectedView = document.getElementById(viewName)
   if (selectedView) {
     selectedView.classList.add('active')
   }
@@ -809,19 +861,24 @@ function showView(viewName) {
     btn.classList.remove('active')
   })
   
-  if (viewName === 'inventories') {
+  if (viewName === 'inventories-view') {
     inventoriesBtn.classList.add('active')
-  } else if (viewName === 'account') {
+  } else if (viewName === 'account-view') {
     accountBtn.classList.add('active')
   }
 }
 
 function showInventoryDetail(inventoryId) {
+  console.log('showInventoryDetail called with inventoryId:', inventoryId)
   currentInventoryId = inventoryId
-  showView('inventory-detail')
+  console.log('Setting currentInventoryId to:', currentInventoryId)
+  
+  showView('inventory-detail-view')
   
   // Update inventory name
   const currentInventory = inventories.find(inv => inv.id === inventoryId)
+  console.log('Found inventory:', currentInventory)
+  
   if (currentInventory) {
     const nameElement = document.getElementById('currentInventoryName')
     if (nameElement) {
@@ -830,6 +887,7 @@ function showInventoryDetail(inventoryId) {
   }
   
   // Load inventory data
+  console.log('Calling loadCurrentInventory...')
   loadCurrentInventory()
 }
 
