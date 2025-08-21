@@ -684,10 +684,29 @@ function setupEventListeners() {
 
   if (scanBottleBtn) {
     scanBottleBtn.addEventListener('click', () => {
+      console.log('Scan Bottle button clicked!')
+      console.log('currentInventoryId at click time:', currentInventoryId)
+      console.log('Type of currentInventoryId:', typeof currentInventoryId)
+      
       if (currentInventoryId) {
         localStorage.setItem('pendingInventoryId', currentInventoryId)
-        window.location.href = 'scan.html'
+        console.log('Set pendingInventoryId in localStorage to:', currentInventoryId)
+        
+        // Verify it was set correctly
+        const verifyId = localStorage.getItem('pendingInventoryId')
+        console.log('Verification - pendingInventoryId from localStorage:', verifyId)
+        console.log('Verification - currentInventoryId:', currentInventoryId)
+        console.log('Verification - Are they equal?', verifyId === currentInventoryId)
+        
+        console.log('About to navigate to scan.html...')
+        
+        // Add a small delay to ensure localStorage is set
+        setTimeout(() => {
+          console.log('Navigating to scan.html now...')
+          window.location.href = 'scan.html'
+        }, 100)
       } else {
+        console.error('No currentInventoryId available for scan bottle')
         alert('Please select an inventory first')
       }
     })
@@ -695,10 +714,29 @@ function setupEventListeners() {
 
   if (manualEntryBtn) {
     manualEntryBtn.addEventListener('click', () => {
+      console.log('Manual Entry button clicked!')
+      console.log('currentInventoryId at click time:', currentInventoryId)
+      console.log('Type of currentInventoryId:', typeof currentInventoryId)
+      
       if (currentInventoryId) {
         localStorage.setItem('pendingInventoryId', currentInventoryId)
-        window.location.href = 'new.html'
+        console.log('Set pendingInventoryId in localStorage to:', currentInventoryId)
+        
+        // Verify it was set correctly
+        const verifyId = localStorage.getItem('pendingInventoryId')
+        console.log('Verification - pendingInventoryId from localStorage:', verifyId)
+        console.log('Verification - currentInventoryId:', currentInventoryId)
+        console.log('Verification - Are they equal?', verifyId === currentInventoryId)
+        
+        console.log('About to navigate to new.html...')
+        
+        // Add a small delay to ensure localStorage is set
+        setTimeout(() => {
+          console.log('Navigating to new.html now...')
+          window.location.href = 'new.html'
+        }, 100)
       } else {
+        console.error('No currentInventoryId available for manual entry')
         alert('Please select an inventory first')
       }
     })

@@ -100,6 +100,7 @@
         </div>
         <div class="actions">
           <button type="submit" class="btn primary">Add to Inventory</button>
+          <button type="button" class="btn" onclick="console.log('Current inventory ID:', currentInventoryId); console.log('pendingInventoryId from localStorage:', localStorage.getItem('pendingInventoryId'));">Debug Inventory ID</button>
         </div>
         <div id="formError" class="error" role="alert"></div>
       </form>

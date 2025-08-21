@@ -306,6 +306,11 @@ function renderLocationOptions() {
 
 document.addEventListener('DOMContentLoaded', () => {
   console.log('DOM Content Loaded - Starting initialization...')
+  console.log('=== DEBUGGING INVENTORY ID ===')
+  console.log('pendingInventoryId from localStorage:', localStorage.getItem('pendingInventoryId'))
+  console.log('All localStorage keys:', Object.keys(localStorage))
+  console.log('================================')
+  
   checkAuth()
   loadInventoryAndLocations()
   renderAmountUnits()
