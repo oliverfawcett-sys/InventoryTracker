@@ -286,11 +286,19 @@ function renderInventoryTable() {
     </tr>
   `).join('')
   
-  currentInventoryItems.forEach(item => {
-    if (item.model_cid) {
-      render3DModelTiny(item.id, item.model_cid)
-    }
-  })
+  // Render 3D models with a delay to ensure 3Dmol library is loaded
+  setTimeout(() => {
+    console.log('Starting 3D model rendering...')
+    console.log('3Dmol library available:', typeof window.$3Dmol !== 'undefined')
+    console.log('Items with model_cid:', currentInventoryItems.filter(item => item.model_cid).length)
+    
+    currentInventoryItems.forEach(item => {
+      if (item.model_cid) {
+        console.log(`Rendering 3D model for item ${item.id} with CID ${item.model_cid}`)
+        render3DModelTiny(item.id, item.model_cid)
+      }
+    })
+  }, 1000)
 }
 
 function renderLocations() {
@@ -537,11 +545,19 @@ function renderFilteredInventory(filteredItems) {
     </tr>
   `).join('')
   
-  filteredItems.forEach(item => {
-    if (item.model_cid) {
-      render3DModelTiny(item.id, item.model_cid)
-    }
-  })
+  // Render 3D models with a delay to ensure 3Dmol library is loaded
+  setTimeout(() => {
+    console.log('Starting filtered 3D model rendering...')
+    console.log('3Dmol library available:', typeof window.$3Dmol !== 'undefined')
+    console.log('Filtered items with model_cid:', filteredItems.filter(item => item.model_cid).length)
+    
+    filteredItems.forEach(item => {
+      if (item.model_cid) {
+        console.log(`Rendering filtered 3D model for item ${item.id} with CID ${item.model_cid}`)
+        render3DModelTiny(item.id, item.model_cid)
+      }
+    })
+  }, 1000)
 }
 
 function setupEventListeners() {
@@ -666,38 +682,64 @@ function deleteItem(itemId) {
   }
 }
 
+function waitFor3Dmol(callback, maxAttempts = 20) {
+  if (typeof window.$3Dmol !== 'undefined') {
+    callback()
+    return
+  }
+  
+  if (maxAttempts <= 0) {
+    console.error('3Dmol library failed to load after multiple attempts')
+    return
+  }
+  
+  console.log(`Waiting for 3Dmol library... (${maxAttempts} attempts remaining)`)
+  setTimeout(() => waitFor3Dmol(callback, maxAttempts - 1), 250)
+}
+
 function render3DModelTiny(itemId, cid) {
   const viewer = document.getElementById(`viewer3d-tiny-${itemId}`)
-  if (!viewer || !cid || !window.$3Dmol) return
+  if (!viewer || !cid) return
   
-  try {
-    const config = { backgroundColor: 'white' }
-    const viewer3d = $3Dmol.createViewer(viewer, config)
-    
-    const timeoutId = setTimeout(() => {
+  // Wait for 3Dmol library to be loaded
+  waitFor3Dmol(() => {
+    try {
+      console.log(`Rendering 3D model for item ${itemId} with CID ${cid}`)
+      const config = { backgroundColor: 'white' }
+      const viewer3d = $3Dmol.createViewer(viewer, config)
+      
+      const timeoutId = setTimeout(() => {
+        viewer.innerHTML = '<span style="color: #666; font-size: 12px;">Loading...</span>'
+      }, 3000)
+      
+      fetch(`https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/cid/${cid}/record/SDF/?record_type=3d`)
+        .then(response => {
+          if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`)
+          }
+          return response.text()
+        })
+        .then(data => {
+          clearTimeout(timeoutId)
+          if (data && data.trim()) {
+            viewer3d.addModel(data, 'sdf')
+            viewer3d.zoomTo()
+            viewer3d.render()
+            console.log(`3D model rendered successfully for item ${itemId}`)
+          } else {
+            viewer.innerHTML = '<span style="color: #666; font-size: 12px;">No 3D data</span>'
+          }
+        })
+        .catch(error => {
+          clearTimeout(timeoutId)
+          console.error(`Error loading 3D model for item ${itemId}:`, error)
+          viewer.innerHTML = '<span style="color: #666; font-size: 12px;">3D Model</span>'
+        })
+    } catch (error) {
+      console.error(`Error rendering 3D model for item ${itemId}:`, error)
       viewer.innerHTML = '<span style="color: #666; font-size: 12px;">3D Model</span>'
-    }, 5000)
-    
-    fetch(`https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/cid/${cid}/record/SDF/?record_type=3d`)
-      .then(response => response.text())
-      .then(data => {
-        clearTimeout(timeoutId)
-        if (data && data.trim()) {
-          viewer3d.addModel(data, 'sdf')
-          viewer3d.zoomTo()
-        } else {
-          viewer.innerHTML = '<span style="color: #666; font-size: 12px;">No 3D data</span>'
-        }
-      })
-      .catch(error => {
-        clearTimeout(timeoutId)
-        console.error('Error loading 3D model:', error)
-        viewer.innerHTML = '<span style="color: #666; font-size: 12px;">3D Model</span>'
-      })
-  } catch (error) {
-    console.error('Error rendering 3D model:', error)
-    viewer.innerHTML = '<span style="color: #666; font-size: 12px;">3D Model</span>'
-  }
+    }
+  })
 }
 
 async function changePassword() {
@@ -768,6 +810,13 @@ document.addEventListener('DOMContentLoaded', () => {
     initDarkMode()
     setupEventListeners()
     checkAuth()
+    
+    // Test 3Dmol library loading
+    setTimeout(() => {
+      console.log('3Dmol library status check:')
+      console.log('- Library loaded:', typeof window.$3Dmol !== 'undefined')
+      console.log('- Library object:', window.$3Dmol)
+    }, 2000)
   } catch (error) {
     console.error('Initialization error:', error)
   }
