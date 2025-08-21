@@ -12,7 +12,7 @@ html, body {
 }
 
 .sidebar {
-  width: 100px;
+  width: 140px;
   background: var(--bg-secondary);
   border-right: 1px solid var(--border-primary);
   display: flex;
@@ -122,7 +122,7 @@ html, body {
 
 .main-content {
   flex: 1;
-  margin-left: 100px;
+  margin-left: 140px;
   min-height: 100vh;
   background: var(--bg-primary);
   transition: margin-left 0.3s ease;
