@@ -601,13 +601,7 @@ tbody tr:last-child td {
   display: block;
 }
 
-.meta {
-  margin-top: 12px;
-  color: var(--text-muted);
-  font-size: 13px;
-  font-weight: 500;
-  transition: color 0.3s ease;
-}
+
 
 .footer {
   margin-top: 20px;
@@ -717,30 +711,21 @@ tbody tr:last-child td {
   border-radius: 0 0 6px 6px;
 }
 
-#darkModeToggle {
-  min-width: auto;
-  width: 40px;
-  height: 40px;
-  padding: 0;
-  border-radius: 50%;
+.dark-mode-toggle {
+  padding: 8px 16px;
+  border-radius: 20px;
   background: var(--bg-secondary);
   border: 1px solid var(--border-primary);
   color: var(--text-primary);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
   transition: all 0.3s ease;
 }
 
-#darkModeToggle:hover {
+.dark-mode-toggle:hover {
   background: var(--bg-tertiary);
-  transform: scale(1.1);
-}
-
-#darkModeIcon {
-  font-size: 16px;
-  transition: transform 0.3s ease;
-}
-
-[data-theme="dark"] #darkModeIcon {
-  transform: rotate(180deg);
+  transform: translateY(-1px);
 }
 
 [data-theme="dark"] .logo {

@@ -1,5 +1,4 @@
 const darkModeToggle = document.getElementById('darkModeToggle')
-const darkModeIcon = document.getElementById('darkModeIcon')
 
 const inventoriesBtn = document.getElementById('inventoriesBtn')
 const accountBtn = document.getElementById('accountBtn')
@@ -28,7 +27,7 @@ let currentLocations = []
 function initDarkMode() {
   const savedTheme = localStorage.getItem('theme') || 'light'
   document.documentElement.setAttribute('data-theme', savedTheme)
-  updateDarkModeIcon()
+  updateDarkModeText()
 }
 
 function toggleDarkMode() {
@@ -37,13 +36,14 @@ function toggleDarkMode() {
   
   document.documentElement.setAttribute('data-theme', newTheme)
   localStorage.setItem('theme', newTheme)
-  updateDarkModeIcon()
+  updateDarkModeText()
 }
 
-function updateDarkModeIcon() {
+function updateDarkModeText() {
   const currentTheme = document.documentElement.getAttribute('data-theme')
-  if (darkModeIcon) {
-    darkModeIcon.textContent = currentTheme === 'dark' ? '☀️' : '🌙'
+  const darkModeText = document.getElementById('darkModeText')
+  if (darkModeText) {
+    darkModeText.textContent = currentTheme === 'dark' ? 'Light Mode' : 'Dark Mode'
   }
 }
 
@@ -154,10 +154,7 @@ function renderInventoriesList() {
         <div class="inventory-card" onclick="showInventoryDetail(${inventory.id})">
           <h3>${inventory.name}</h3>
           ${inventory.description ? `<p>${inventory.description}</p>` : ''}
-          <div class="meta">
-            <span>📦 Inventory</span>
-            <span>🔄 Click to view</span>
-          </div>
+
         </div>
       `).join('')}
     </div>
