@@ -134,21 +134,45 @@ function updateDarkModeIcon(theme) {
 }
 
 async function fetchPubChemSummary(query) {
+  console.log('fetchPubChemSummary called with query:', query)
   const base = 'https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound'
   // Check if query looks like a CAS number
   const isCas = /^(\d{1,7}-\d{2}-\d)$/.test(query.trim())
+  console.log('Query is CAS number:', isCas)
   
   let url, res, data, record, id
   
   if (isCas) {
-    // Look up by CAS number
-    url = `${base}/cid/${query.trim()}/JSON`
+    console.log('Looking up CAS number:', query.trim())
+    // Look up by CAS number - first search for the CAS to get the CID
+    url = `${base}/name/${encodeURIComponent(query.trim())}/JSON`
+    console.log('Trying URL:', url)
     res = await fetch(url, { headers: { 'Accept': 'application/json' } })
-    if (!res.ok) throw new Error('CAS lookup failed')
+    console.log('First attempt response status:', res.status)
+    
+    if (!res.ok) {
+      // If name search fails, try searching by CAS as a synonym
+      url = `${base}/synonyms/${encodeURIComponent(query.trim())}/JSON`
+      console.log('Trying synonyms URL:', url)
+      res = await fetch(url, { headers: { 'Accept': 'application/json' } })
+      console.log('Synonyms attempt response status:', res.status)
+      if (!res.ok) throw new Error('CAS lookup failed')
+    }
+    
     data = await res.json()
-    record = data?.PC_Compounds?.[0]
-    if (!record) throw new Error('No results for CAS')
-    id = record?.id?.id?.cid
+    console.log('Response data structure:', Object.keys(data))
+    
+    // Extract CID from the response
+    if (data?.PC_Compounds?.[0]) {
+      id = data.PC_Compounds[0].id?.id?.cid
+      console.log('Found CID from PC_Compounds:', id)
+    } else if (data?.InformationList?.Information?.[0]?.CID) {
+      id = data.InformationList.Information[0].CID
+      console.log('Found CID from InformationList:', id)
+    } else {
+      console.log('No CID found in response data')
+      throw new Error('No results for CAS')
+    }
   } else {
     // Look up by name
     url = `${base}/name/${encodeURIComponent(query.trim())}/JSON`
@@ -178,7 +202,9 @@ async function fetchPubChemSummary(query) {
       casVal = found || ''
     }
   } catch (_) {}
-  return { cid: id, name: title || (lookupQueryInput.value || '').trim(), cas: casVal }
+  const result = { cid: id, name: title || query.trim(), cas: casVal }
+  console.log('fetchPubChemSummary returning:', result)
+  return result
 }
 
 function initViewer() {
@@ -409,6 +435,7 @@ document.addEventListener('DOMContentLoaded', () => {
             showLookupSection(false)
           }).catch((error) => {
             console.error('PubChem fetch error:', error)
+            console.error('Error details:', error.message)
             showLookupSection(true)
           })
         }
