@@ -455,6 +455,11 @@ async function createInventory() {
                    window.location.href = 'login.html'
                    return
                  }
+                 
+                 if (response.status === 500 && errorData.message.includes('Database schema needs to be updated')) {
+                   alert('Database schema needs to be updated. Please:\n\n1. Go to the Account tab\n2. Click "Database Migration"\n3. Click "Run Migration"\n4. Try creating the inventory again')
+                   return
+                 }
                } catch (parseError) {
                  console.error('Could not parse error response:', parseError)
                  errorMessage = `HTTP ${response.status}: ${response.statusText}`

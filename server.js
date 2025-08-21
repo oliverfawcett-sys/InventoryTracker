@@ -369,11 +369,22 @@ app.post('/api/inventories', authenticateToken, async (req, res) => {
     
     const defaultLocations = ['Storage Room A', 'Storage Room B', 'Lab Bench 1', 'Lab Bench 2', 'Fridge', 'Freezer']
     
-    for (const locationName of defaultLocations) {
-      await pool.query(
-        'INSERT INTO locations (inventory_id, user_id, name) VALUES ($1, $2, $3)',
-        [newInventory.id, req.user.userId, locationName]
-      )
+    try {
+      for (const locationName of defaultLocations) {
+        await pool.query(
+          'INSERT INTO locations (inventory_id, user_id, name) VALUES ($1, $2, $3)',
+          [newInventory.id, req.user.userId, locationName]
+        )
+      }
+    } catch (locationError) {
+      console.error('Error creating default locations:', locationError)
+      if (locationError.message.includes('column "inventory_id" of relation "locations" does not exist')) {
+        console.log('Locations table missing inventory_id column. Please run database migration first.')
+        return res.status(500).json({ 
+          message: 'Database schema needs to be updated. Please run the "Run Migration" button from the Account tab first, then try creating the inventory again.' 
+        })
+      }
+      throw locationError
     }
     
     res.status(201).json(newInventory)
@@ -600,9 +611,15 @@ app.post('/api/migrate-db', async (req, res) => {
       ADD COLUMN IF NOT EXISTS inventory_id INTEGER
     `
     
+    const addInventoryIdToLocations = `
+      ALTER TABLE locations 
+      ADD COLUMN IF NOT EXISTS inventory_id INTEGER REFERENCES inventories(id) ON DELETE CASCADE
+    `
+    
     await pool.query(addImageDataColumn)
     await pool.query(addModelCidColumn)
     await pool.query(addInventoryIdColumn)
+    await pool.query(addInventoryIdToLocations)
     
     console.log('Database migration completed!')
     res.json({ message: 'Database migration completed successfully' })
