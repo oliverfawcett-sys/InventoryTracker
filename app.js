@@ -440,19 +440,27 @@ async function createInventory() {
       
       await loadCurrentInventory()
       closeCreateInventoryModal()
-    } else {
-      console.error('Response not OK. Status:', response.status, response.statusText)
-      let errorMessage = 'Unknown error'
-      try {
-        const errorData = await response.json()
-        console.error('Error response data:', errorData)
-        errorMessage = errorData.message || errorData.error || 'Server error'
-      } catch (parseError) {
-        console.error('Could not parse error response:', parseError)
-        errorMessage = `HTTP ${response.status}: ${response.statusText}`
-      }
-      alert('Failed to create inventory: ' + errorMessage)
-    }
+                 } else {
+               console.error('Response not OK. Status:', response.status, response.statusText)
+               let errorMessage = 'Unknown error'
+               try {
+                 const errorData = await response.json()
+                 console.error('Error response data:', errorData)
+                 errorMessage = errorData.message || errorData.error || 'Server error'
+                 
+                 if (response.status === 401 && errorData.message.includes('User not found')) {
+                   alert('Your session has expired. Please log in again.')
+                   localStorage.removeItem('authToken')
+                   localStorage.removeItem('currentUser')
+                   window.location.href = 'login.html'
+                   return
+                 }
+               } catch (parseError) {
+                 console.error('Could not parse error response:', parseError)
+                 errorMessage = `HTTP ${response.status}: ${response.statusText}`
+               }
+               alert('Failed to create inventory: ' + errorMessage)
+             }
   } catch (error) {
     console.error('Error creating inventory:', error)
     alert('Network error. Please try again.')
@@ -587,6 +595,15 @@ function setupEventListeners() {
     changePasswordForm.addEventListener('submit', async (e) => {
       e.preventDefault()
       await changePassword()
+    })
+  }
+
+  const logoutBtn = document.getElementById('logoutBtn')
+  if (logoutBtn) {
+    logoutBtn.addEventListener('click', () => {
+      localStorage.removeItem('authToken')
+      localStorage.removeItem('currentUser')
+      window.location.href = 'login.html'
     })
   }
 

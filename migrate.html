@@ -129,6 +129,13 @@
         if (response.ok) {
           clearAllDataResult.innerHTML = `<div class="success">${result.message}</div>`
           clearAllDataBtn.textContent = 'Data Cleared Successfully'
+          
+          setTimeout(() => {
+            localStorage.removeItem('authToken')
+            localStorage.removeItem('currentUser')
+            alert('All data cleared! You will now be redirected to login to start fresh.')
+            window.location.href = 'login.html'
+          }, 2000)
         } else {
           clearAllDataResult.innerHTML = `<div class="error">${result.message}</div>`
         }

@@ -335,6 +335,11 @@ app.post('/api/auth/reset-password', async (req, res) => {
 
 app.get('/api/inventories', authenticateToken, async (req, res) => {
   try {
+    const userCheck = await pool.query('SELECT id FROM users WHERE id = $1', [req.user.userId])
+    if (userCheck.rows.length === 0) {
+      return res.status(401).json({ message: 'User not found. Please log in again.' })
+    }
+    
     const result = await pool.query(
       'SELECT * FROM inventories WHERE user_id = $1 ORDER BY created_at DESC',
       [req.user.userId]
@@ -349,6 +354,11 @@ app.get('/api/inventories', authenticateToken, async (req, res) => {
 app.post('/api/inventories', authenticateToken, async (req, res) => {
   try {
     const { name, description } = req.body
+    
+    const userCheck = await pool.query('SELECT id FROM users WHERE id = $1', [req.user.userId])
+    if (userCheck.rows.length === 0) {
+      return res.status(401).json({ message: 'User not found. Please log in again.' })
+    }
     
     const result = await pool.query(
       'INSERT INTO inventories (user_id, name, description) VALUES ($1, $2, $3) RETURNING *',
@@ -393,6 +403,11 @@ app.delete('/api/inventories/:id', authenticateToken, async (req, res) => {
 
 app.get('/api/inventory/:inventoryId', authenticateToken, async (req, res) => {
   try {
+    const userCheck = await pool.query('SELECT id FROM users WHERE id = $1', [req.user.userId])
+    if (userCheck.rows.length === 0) {
+      return res.status(401).json({ message: 'User not found. Please log in again.' })
+    }
+    
     const result = await pool.query(
       'SELECT * FROM inventory_items WHERE inventory_id = $1 AND user_id = $2 ORDER BY created_at DESC',
       [req.params.inventoryId, req.user.userId]
@@ -406,6 +421,11 @@ app.get('/api/inventory/:inventoryId', authenticateToken, async (req, res) => {
 
 app.get('/api/locations/:inventoryId', authenticateToken, async (req, res) => {
   try {
+    const userCheck = await pool.query('SELECT id FROM users WHERE id = $1', [req.user.userId])
+    if (userCheck.rows.length === 0) {
+      return res.status(401).json({ message: 'User not found. Please log in again.' })
+    }
+    
     const result = await pool.query(
       'SELECT * FROM locations WHERE inventory_id = $1 AND user_id = $2 ORDER BY name',
       [req.params.inventoryId, req.user.userId]
