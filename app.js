@@ -242,12 +242,7 @@ function renderInventory() {
     return
   }
   
-  let html = `
-    <div class="inventory-info">
-      <h3>${currentInventory.name}</h3>
-      ${currentInventory.description ? `<p>${currentInventory.description}</p>` : ''}
-    </div>
-  `
+  let html = ''
   
   if (currentInventoryItems.length === 0) {
     html += '<div class="empty-state"><p>No items in this inventory yet</p></div>'
