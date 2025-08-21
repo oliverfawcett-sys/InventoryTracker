@@ -413,13 +413,18 @@ async function createInventory() {
   try {
     console.log('Creating inventory:', { name, description })
     const token = localStorage.getItem('authToken')
+    console.log('Using token:', !!token)
+    
+    const requestBody = { name, description }
+    console.log('Request body:', requestBody)
+    
     const response = await fetch('/api/inventories', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${token}`
       },
-      body: JSON.stringify({ name, description })
+      body: JSON.stringify(requestBody)
     })
     
     console.log('Create inventory response status:', response.status)
@@ -436,9 +441,17 @@ async function createInventory() {
       await loadCurrentInventory()
       closeCreateInventoryModal()
     } else {
-      const errorData = await response.json()
-      console.error('Failed to create inventory:', errorData)
-      alert('Failed to create inventory: ' + (errorData.message || 'Unknown error'))
+      console.error('Response not OK. Status:', response.status, response.statusText)
+      let errorMessage = 'Unknown error'
+      try {
+        const errorData = await response.json()
+        console.error('Error response data:', errorData)
+        errorMessage = errorData.message || errorData.error || 'Server error'
+      } catch (parseError) {
+        console.error('Could not parse error response:', parseError)
+        errorMessage = `HTTP ${response.status}: ${response.statusText}`
+      }
+      alert('Failed to create inventory: ' + errorMessage)
     }
   } catch (error) {
     console.error('Error creating inventory:', error)
