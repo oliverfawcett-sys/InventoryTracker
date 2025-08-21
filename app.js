@@ -892,14 +892,36 @@ function showInventoryDetail(inventoryId) {
 }
 
 function switchDetailTab(tabName) {
+  console.log('switchDetailTab called with tabName:', tabName)
+  
   detailTabs.forEach(tab => tab.classList.remove('active'))
   detailTabContents.forEach(content => content.classList.remove('active'))
   
   const activeTab = document.querySelector(`[data-tab="${tabName}"]`)
-  const activeContent = document.getElementById(`inventory-${tabName}-tab`)
+  if (activeTab) {
+    activeTab.classList.add('active')
+    console.log('Activated tab:', activeTab)
+  }
   
-  if (activeTab) activeTab.classList.add('active')
-  if (activeContent) activeContent.classList.add('active')
+  let activeContent
+  if (tabName === 'inventory') {
+    activeContent = document.getElementById('inventory-items-tab')
+  } else if (tabName === 'locations') {
+    activeContent = document.getElementById('inventory-locations-tab')
+  }
+  
+  if (activeContent) {
+    activeContent.classList.add('active')
+    console.log('Activated content:', activeContent)
+    
+    // If switching to inventory tab, re-render the inventory
+    if (tabName === 'inventory') {
+      console.log('Re-rendering inventory for tab switch')
+      renderInventory()
+    }
+  } else {
+    console.log('Active content not found for tab:', tabName)
+  }
 }
 
 document.addEventListener('DOMContentLoaded', () => {

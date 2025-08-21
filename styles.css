@@ -81,6 +81,17 @@ html, body {
   font-size: 20px;
   width: 24px;
   text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.sidebar-icon-img {
+  width: 20px;
+  height: 20px;
+  object-fit: contain;
+  filter: var(--icon-filter);
+  transition: filter 0.3s ease;
 }
 
 .sidebar-btn-text {
@@ -288,6 +299,7 @@ html, body {
   --success-bg: #f0fdf4;
   --error-primary: #dc2626;
   --error-bg: #fef2f2;
+  --icon-filter: brightness(0.7);
 }
 
 [data-theme="dark"] {
@@ -311,6 +323,7 @@ html, body {
   --success-bg: #1a202c;
   --error-primary: #fc8181;
   --error-bg: #1a202c;
+  --icon-filter: brightness(1.2);
 }
 
 body {
