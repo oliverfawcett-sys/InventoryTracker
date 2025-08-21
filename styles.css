@@ -12,7 +12,7 @@ html, body {
 }
 
 .sidebar {
-  width: 280px;
+  width: 80px;
   background: var(--bg-secondary);
   border-right: 1px solid var(--border-primary);
   display: flex;
@@ -22,6 +22,12 @@ html, body {
   left: 0;
   top: 0;
   z-index: 100;
+  transition: width 0.3s ease;
+  overflow: hidden;
+}
+
+.sidebar:hover {
+  width: 280px;
 }
 
 .sidebar-header {
@@ -30,6 +36,11 @@ html, body {
   display: flex;
   justify-content: center;
   align-items: center;
+  transition: justify-content 0.3s ease;
+}
+
+.sidebar:hover .sidebar-header {
+  justify-content: flex-start;
 }
 
 .sidebar-header .logo {
@@ -54,9 +65,23 @@ html, body {
   cursor: pointer;
   display: flex;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
   transition: all 0.3s ease;
   border-left: 3px solid transparent;
+  white-space: nowrap;
+}
+
+.sidebar-btn-text {
+  opacity: 0;
+  margin-left: 12px;
+  font-weight: 500;
+  font-size: 16px;
+  transition: opacity 0.3s ease;
+  pointer-events: none;
+}
+
+.sidebar:hover .sidebar-btn-text {
+  opacity: 1;
 }
 
 .sidebar-btn:hover {
@@ -89,9 +114,14 @@ html, body {
 
 .main-content {
   flex: 1;
-  margin-left: 280px;
+  margin-left: 80px;
   min-height: 100vh;
   background: var(--bg-primary);
+  transition: margin-left 0.3s ease;
+}
+
+.sidebar:hover + .main-content {
+  margin-left: 280px;
 }
 
 .view-content {
@@ -228,6 +258,7 @@ html, body {
   .sidebar {
     transform: translateX(-100%);
     transition: transform 0.3s ease;
+    width: 280px;
   }
   
   .sidebar.active {
