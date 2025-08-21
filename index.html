@@ -8,116 +8,136 @@
       <script src="https://cdn.jsdelivr.net/npm/3dmol@2.0.4/build/3Dmol-min.js"></script>
 </head>
 <body>
-  <div class="container">
-    <header class="header">
-      <div class="header-brand">
+  <div class="app-container">
+    <aside class="sidebar">
+      <div class="sidebar-header">
         <img src="logo.png" alt="Inventory Tracker Logo" class="logo">
       </div>
-      <div class="header-actions">
-        <button id="darkModeToggle" class="btn secondary" aria-label="Toggle dark mode">
-          <span id="darkModeIcon">🌙</span>
+      
+      <nav class="sidebar-nav">
+        <button class="sidebar-btn active" id="inventoriesBtn">
+          <span class="sidebar-btn-icon">📋</span>
+          <span class="sidebar-btn-text">Inventories</span>
+        </button>
+      </nav>
+      
+      <div class="sidebar-footer">
+        <button class="sidebar-btn" id="accountBtn">
+          <span class="sidebar-btn-icon">👤</span>
+          <span class="sidebar-btn-text">Account</span>
+        </button>
+        <button class="sidebar-btn danger" id="logoutBtn">
+          <span class="sidebar-btn-icon">🚪</span>
+          <span class="sidebar-btn-text">Logout</span>
         </button>
       </div>
-    </header>
+    </aside>
 
-    <nav class="nav-tabs">
-      <button class="nav-tab active" data-tab="inventory">Inventory</button>
-      <button class="nav-tab" data-tab="locations">Locations</button>
-      <button class="nav-tab" data-tab="account">Account</button>
-    </nav>
-
-    <div class="mobile-nav">
-      <button class="mobile-nav-toggle" id="mobileNavToggle">
-        <span id="mobileNavText">Inventory</span>
-        <span class="mobile-nav-arrow">▼</span>
-      </button>
-      <div class="mobile-nav-dropdown" id="mobileNavDropdown">
-        <div class="mobile-nav-item" data-tab="inventory">Inventory</div>
-        <div class="mobile-nav-item" data-tab="locations">Locations</div>
-        <div class="mobile-nav-item" data-tab="account">Account</div>
-      </div>
-    </div>
-
-    <div id="inventory-tab" class="tab-content active">
-      <div class="inventory-header">
-        <div class="inventory-selector">
-          <label for="inventorySelect">Select Inventory:</label>
-          <select id="inventorySelect">
-            <option value="">Loading inventories...</option>
-          </select>
-          <button id="createInventoryBtn" class="btn secondary">+ New Inventory</button>
+    <main class="main-content">
+      <header class="header">
+        <button id="mobileMenuToggle" class="mobile-menu-toggle">
+          <span>☰</span>
+        </button>
+        <div class="header-actions">
+          <button id="darkModeToggle" class="btn secondary" aria-label="Toggle dark mode">
+            <span id="darkModeIcon">🌙</span>
+          </button>
         </div>
-        <div class="inventory-actions">
-          <button id="scanBottleBtn" class="btn primary">Scan Bottle</button>
-          <button id="manualEntryBtn" class="btn primary">Manual Entry</button>
-        </div>
-      </div>
+      </header>
 
-      <div id="inventoryContent">
-        <div class="empty-state">
-          <p>Select an inventory to view items</p>
+          <div id="inventories-view" class="view-content active">
+        <div class="view-header">
+          <h1>Your Inventories</h1>
+          <button id="createInventoryBtn" class="btn primary">+ New Inventory</button>
         </div>
-      </div>
-    </div>
-
-    <div id="locations-tab" class="tab-content">
-      <div class="card">
-        <h2>Manage Locations</h2>
-        <div id="locationsContent">
+        
+        <div id="inventoriesList">
           <div class="empty-state">
-            <p>Select an inventory to manage its locations</p>
+            <p>Loading inventories...</p>
           </div>
         </div>
       </div>
-    </div>
 
-    <div id="account-tab" class="tab-content">
-      <div class="card">
-        <h2>Account Information</h2>
-        <div id="accountInfo">
-          <p>Loading account information...</p>
+      <div id="inventory-detail-view" class="view-content">
+        <div class="view-header">
+          <button id="backToInventoriesBtn" class="btn secondary">← Back to Inventories</button>
+          <h1 id="currentInventoryName">Inventory Name</h1>
+        </div>
+        
+        <nav class="detail-tabs">
+          <button class="detail-tab active" data-tab="inventory">Inventory Items</button>
+          <button class="detail-tab" data-tab="locations">Locations</button>
+        </nav>
+        
+        <div id="inventory-items-tab" class="detail-tab-content active">
+          <div class="inventory-actions">
+            <button id="scanBottleBtn" class="btn primary">Scan Bottle</button>
+            <button id="manualEntryBtn" class="btn primary">Manual Entry</button>
+          </div>
+          
+          <div id="inventoryContent">
+            <div class="empty-state">
+              <p>Loading inventory items...</p>
+            </div>
+          </div>
+        </div>
+        
+        <div id="inventory-locations-tab" class="detail-tab-content">
+          <div class="card">
+            <h2>Manage Locations</h2>
+            <div id="locationsContent">
+              <div class="empty-state">
+                <p>Loading locations...</p>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
-      
-      <div class="card">
-        <h2>Change Password</h2>
-        <form id="changePasswordForm">
-          <div class="field">
-            <label for="currentPassword">Current Password</label>
-            <input id="currentPassword" type="password" required>
+
+      <div id="account-view" class="view-content">
+        <div class="view-header">
+          <h1>Account Settings</h1>
+        </div>
+        
+        <div class="card">
+          <h2>Account Information</h2>
+          <div id="accountInfo">
+            <p>Loading account information...</p>
           </div>
-          <div class="field">
-            <label for="newPassword">New Password</label>
-            <input id="newPassword" type="password" required minlength="8">
-          </div>
-          <div class="field">
-            <label for="confirmPassword">Confirm New Password</label>
-            <input id="confirmPassword" type="password" required minlength="8">
-          </div>
+        </div>
+        
+        <div class="card">
+          <h2>Change Password</h2>
+          <form id="changePasswordForm">
+            <div class="field">
+              <label for="currentPassword">Current Password</label>
+              <input id="currentPassword" type="password" required>
+            </div>
+            <div class="field">
+              <label for="newPassword">New Password</label>
+              <input id="newPassword" type="password" required minlength="8">
+            </div>
+            <div class="field">
+              <label for="confirmPassword">Confirm New Password</label>
+              <input id="confirmPassword" type="password" required minlength="8">
+            </div>
+            <div class="actions">
+              <button type="submit" class="btn primary">Change Password</button>
+            </div>
+            <div id="passwordError" class="error" role="alert"></div>
+            <div id="passwordSuccess" class="success" role="alert"></div>
+          </form>
+        </div>
+        
+        <div class="card">
+          <h2>Database Management</h2>
+          <p>Manage your database schema and migrate existing data.</p>
           <div class="actions">
-            <button type="submit" class="btn primary">Change Password</button>
+            <a href="migrate.html" class="btn secondary">Database Migration</a>
           </div>
-          <div id="passwordError" class="error" role="alert"></div>
-          <div id="passwordSuccess" class="success" role="alert"></div>
-        </form>
-      </div>
-      
-      <div class="card">
-        <h2>Database Management</h2>
-        <p>Manage your database schema and migrate existing data.</p>
-        <div class="actions">
-          <a href="migrate.html" class="btn secondary">Database Migration</a>
         </div>
       </div>
-      
-      <div class="card">
-        <h2>Account Actions</h2>
-        <p>Manage your account and session.</p>
-        <div class="actions">
-          <button id="logoutBtn" class="btn danger">Logout</button>
-        </div>
-      </div>
-    </div>
+        </main>
   </div>
 
   <div id="createInventoryModal" class="modal">

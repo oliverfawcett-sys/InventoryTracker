@@ -1,10 +1,11 @@
 const darkModeToggle = document.getElementById('darkModeToggle')
 const darkModeIcon = document.getElementById('darkModeIcon')
 
-let navTabs
-let tabContents
+const inventoriesBtn = document.getElementById('inventoriesBtn')
+const accountBtn = document.getElementById('accountBtn')
+const logoutBtn = document.getElementById('logoutBtn')
+const backToInventoriesBtn = document.getElementById('backToInventoriesBtn')
 
-const inventorySelect = document.getElementById('inventorySelect')
 const createInventoryBtn = document.getElementById('createInventoryBtn')
 const createInventoryModal = document.getElementById('createInventoryModal')
 const createInventoryForm = document.getElementById('createInventoryForm')
@@ -15,6 +16,10 @@ const scanBottleBtn = document.getElementById('scanBottleBtn')
 const manualEntryBtn = document.getElementById('manualEntryBtn')
 const inventoryContent = document.getElementById('inventoryContent')
 const locationsContent = document.getElementById('locationsContent')
+
+const detailTabs = document.querySelectorAll('.detail-tab')
+const detailTabContents = document.querySelectorAll('.detail-tab-content')
+const mobileMenuToggle = document.getElementById('mobileMenuToggle')
 
 let currentUser = null
 let currentInventoryId = null
@@ -101,13 +106,7 @@ async function loadInventories() {
     if (response.ok) {
       inventories = await response.json()
       console.log('Inventories loaded:', inventories.length)
-      renderInventorySelector()
-      
-      if (inventories.length > 0) {
-        currentInventoryId = inventories[0].id
-        inventorySelect.value = currentInventoryId
-        await loadCurrentInventory()
-      }
+      renderInventoriesList()
     } else {
       console.error('Failed to load inventories:', response.status, response.statusText)
     }
@@ -138,20 +137,33 @@ async function loadAccountInfo() {
   }
 }
 
-function renderInventorySelector() {
-  inventorySelect.innerHTML = ''
+function renderInventoriesList() {
+  const inventoriesList = document.getElementById('inventoriesList')
+  if (!inventoriesList) return
   
   if (inventories.length === 0) {
-    inventorySelect.innerHTML = '<option value="">No inventories found</option>'
+    inventoriesList.innerHTML = `
+      <div class="empty-state">
+        <p>No inventories found. Create your first inventory to get started!</p>
+      </div>
+    `
     return
   }
   
-  inventories.forEach(inventory => {
-    const option = document.createElement('option')
-    option.value = inventory.id
-    option.textContent = inventory.name
-    inventorySelect.appendChild(option)
-  })
+  inventoriesList.innerHTML = `
+    <div class="inventories-grid">
+      ${inventories.map(inventory => `
+        <div class="inventory-card" onclick="showInventoryDetail(${inventory.id})">
+          <h3>${inventory.name}</h3>
+          ${inventory.description ? `<p>${inventory.description}</p>` : ''}
+          <div class="meta">
+            <span>📦 Inventory</span>
+            <span>🔄 Click to view</span>
+          </div>
+        </div>
+      `).join('')}
+    </div>
+  `
 }
 
 async function loadCurrentInventory() {
@@ -437,18 +449,16 @@ async function createInventory() {
     
     console.log('Create inventory response status:', response.status)
     
-    if (response.ok) {
-      const newInventory = await response.json()
-      console.log('New inventory created:', newInventory)
-      inventories.push(newInventory)
-      renderInventorySelector()
-      
-      currentInventoryId = newInventory.id
-      inventorySelect.value = currentInventoryId
-      
-      await loadCurrentInventory()
-      closeCreateInventoryModal()
-                 } else {
+          if (response.ok) {
+        const newInventory = await response.json()
+        console.log('New inventory created:', newInventory)
+        inventories.push(newInventory)
+        renderInventoriesList()
+        
+        // Show the new inventory detail view
+        showInventoryDetail(newInventory.id)
+        closeCreateInventoryModal()
+                  } else {
                console.error('Response not OK. Status:', response.status, response.statusText)
                let errorMessage = 'Unknown error'
                try {
@@ -561,17 +571,56 @@ function renderFilteredInventory(filteredItems) {
 }
 
 function setupEventListeners() {
-  navTabs = document.querySelectorAll('.nav-tab')
-  tabContents = document.querySelectorAll('.tab-content')
+  // Sidebar navigation
+  if (inventoriesBtn) {
+    inventoriesBtn.addEventListener('click', () => showView('inventories'))
+  }
   
-  if (inventorySelect) {
-    inventorySelect.addEventListener('change', async (e) => {
-      currentInventoryId = parseInt(e.target.value)
-      if (currentInventoryId) {
-        await loadCurrentInventory()
+  if (accountBtn) {
+    accountBtn.addEventListener('click', () => showView('account'))
+  }
+  
+  if (logoutBtn) {
+    logoutBtn.addEventListener('click', () => {
+      localStorage.removeItem('authToken')
+      localStorage.removeItem('currentUser')
+      window.location.href = 'login.html'
+    })
+  }
+  
+  if (backToInventoriesBtn) {
+    backToInventoriesBtn.addEventListener('click', () => showView('inventories'))
+  }
+  
+  // Detail tabs
+  detailTabs.forEach(tab => {
+    tab.addEventListener('click', () => {
+      const tabName = tab.dataset.tab
+      switchDetailTab(tabName)
+    })
+  })
+  
+  // Mobile menu toggle
+  if (mobileMenuToggle) {
+    mobileMenuToggle.addEventListener('click', () => {
+      const sidebar = document.querySelector('.sidebar')
+      if (sidebar) {
+        sidebar.classList.toggle('active')
       }
     })
   }
+  
+  // Close mobile menu when clicking outside
+  document.addEventListener('click', (e) => {
+    const sidebar = document.querySelector('.sidebar')
+    const mobileMenuToggle = document.getElementById('mobileMenuToggle')
+    
+    if (sidebar && mobileMenuToggle && 
+        !sidebar.contains(e.target) && 
+        !mobileMenuToggle.contains(e.target)) {
+      sidebar.classList.remove('active')
+    }
+  })
 
   if (createInventoryBtn) {
     createInventoryBtn.addEventListener('click', openCreateInventoryModal)
@@ -618,52 +667,6 @@ function setupEventListeners() {
       await changePassword()
     })
   }
-
-  const logoutBtn = document.getElementById('logoutBtn')
-  if (logoutBtn) {
-    logoutBtn.addEventListener('click', () => {
-      localStorage.removeItem('authToken')
-      localStorage.removeItem('currentUser')
-      window.location.href = 'login.html'
-    })
-  }
-
-  navTabs.forEach(tab => {
-    tab.addEventListener('click', () => {
-      const tabName = tab.dataset.tab
-      switchTab(tabName)
-    })
-  })
-
-  const mobileNavToggle = document.getElementById('mobileNavToggle')
-  if (mobileNavToggle) {
-    mobileNavToggle.addEventListener('click', () => {
-      const dropdown = document.getElementById('mobileNavDropdown')
-      if (dropdown) {
-        dropdown.classList.toggle('active')
-      }
-    })
-  }
-
-  const mobileNavItems = document.querySelectorAll('.mobile-nav-item')
-  mobileNavItems.forEach(item => {
-    item.addEventListener('click', () => {
-      const tabName = item.dataset.tab
-      switchTab(tabName)
-      const dropdown = document.getElementById('mobileNavDropdown')
-      if (dropdown) {
-        dropdown.classList.remove('active')
-      }
-    })
-  })
-
-  document.addEventListener('click', (e) => {
-    const mobileNavToggle = document.getElementById('mobileNavToggle')
-    const mobileNavDropdown = document.getElementById('mobileNavDropdown')
-    if (mobileNavToggle && mobileNavDropdown && !mobileNavToggle.contains(e.target) && !mobileNavDropdown.contains(e.target)) {
-      mobileNavDropdown.classList.remove('active')
-    }
-  })
 }
 
 function deleteItem(itemId) {
@@ -789,20 +792,56 @@ async function changePassword() {
   }
 }
 
-function switchTab(tabName) {
-  navTabs.forEach(tab => tab.classList.remove('active'))
-  tabContents.forEach(content => content.classList.remove('active'))
+function showView(viewName) {
+  // Hide all views
+  document.querySelectorAll('.view-content').forEach(view => {
+    view.classList.remove('active')
+  })
+  
+  // Show selected view
+  const selectedView = document.getElementById(`${viewName}-view`)
+  if (selectedView) {
+    selectedView.classList.add('active')
+  }
+  
+  // Update sidebar button states
+  document.querySelectorAll('.sidebar-btn').forEach(btn => {
+    btn.classList.remove('active')
+  })
+  
+  if (viewName === 'inventories') {
+    inventoriesBtn.classList.add('active')
+  } else if (viewName === 'account') {
+    accountBtn.classList.add('active')
+  }
+}
+
+function showInventoryDetail(inventoryId) {
+  currentInventoryId = inventoryId
+  showView('inventory-detail')
+  
+  // Update inventory name
+  const currentInventory = inventories.find(inv => inv.id === inventoryId)
+  if (currentInventory) {
+    const nameElement = document.getElementById('currentInventoryName')
+    if (nameElement) {
+      nameElement.textContent = currentInventory.name
+    }
+  }
+  
+  // Load inventory data
+  loadCurrentInventory()
+}
+
+function switchDetailTab(tabName) {
+  detailTabs.forEach(tab => tab.classList.remove('active'))
+  detailTabContents.forEach(content => content.classList.remove('active'))
   
   const activeTab = document.querySelector(`[data-tab="${tabName}"]`)
-  const activeContent = document.getElementById(`${tabName}-tab`)
+  const activeContent = document.getElementById(`inventory-${tabName}-tab`)
   
   if (activeTab) activeTab.classList.add('active')
   if (activeContent) activeContent.classList.add('active')
-  
-  const mobileNavText = document.getElementById('mobileNavText')
-  if (mobileNavText) {
-    mobileNavText.textContent = tabName.charAt(0).toUpperCase() + tabName.slice(1)
-  }
 }
 
 document.addEventListener('DOMContentLoaded', () => {
