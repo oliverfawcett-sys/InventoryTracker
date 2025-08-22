@@ -867,68 +867,132 @@ async function lookupFluorochemProduct(productCode, cas) {
   try {
     console.log(`Looking up Fluorochem product: ${productCode}`)
     
-    // Try direct product URL first
-    const productUrl = `https://www.fluorochem.co.uk/products/${productCode}`
+    // Fluorochem has a systematic URL structure for their products
+    const baseUrl = 'https://www.fluorochem.co.uk'
+    const sdsUrl = `https://sds.fluorochem.co.uk/eng/sds_${productCode}_en.pdf`
     
-    // Use a headless browser approach or fetch with proper headers
-    const response = await fetch(productUrl, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
-      }
-    })
+    // Try to get product information from their main site
+    const productUrl = `${baseUrl}/products/${productCode}`
+    const searchUrl = `${baseUrl}/search?q=${encodeURIComponent(productCode)}`
     
-    if (response.ok) {
-      const html = await response.text()
-      
-      // Extract price information
-      const priceMatch = html.match(/£\s*([\d,]+\.?\d*)/)
-      const price = priceMatch ? parseFloat(priceMatch[1].replace(/,/g, '')) : null
-      
-      // Extract availability
-      const availabilityMatch = html.match(/availability[:\s]*([^<>\n]+)/i)
-      const availability = availabilityMatch ? availabilityMatch[1].trim() : null
-      
-      // Extract description
-      const descMatch = html.match(/<meta[^>]*description[^>]*content="([^"]+)"/i)
-      const description = descMatch ? descMatch[1] : null
-      
-      return {
-        vendor: 'Fluorochem Ltd.',
-        productUrl: productUrl,
-        price: price,
-        availability: availability,
-        description: description,
-        source: 'fluorochem.co.uk'
+    let productData = {
+      vendor: 'Fluorochem Ltd.',
+      productUrl: null,
+      sdsUrl: sdsUrl,
+      price: null,
+      availability: null,
+      description: null,
+      source: 'fluorochem.co.uk',
+      companyInfo: {
+        name: 'Fluorochem Ltd.',
+        address: 'Unit 14, Graphite Way, Hadfield, Glossop Derbys. SK13 1QH, United Kingdom',
+        phone: '+441457860111',
+        email: 'sds@fluorochem.co.uk',
+        website: baseUrl
       }
     }
     
-    // Fallback: Search their catalog
-    const searchUrl = `https://www.fluorochem.co.uk/search?q=${encodeURIComponent(productCode)}`
-    const searchResponse = await fetch(searchUrl, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
-      }
-    })
-    
-    if (searchResponse.ok) {
-      const searchHtml = await searchResponse.text()
-      
-      // Look for product links in search results
-      const productLinkMatch = searchHtml.match(/href="([^"]*products[^"]*${productCode}[^"]*)"/i)
-      if (productLinkMatch) {
-        const foundProductUrl = `https://www.fluorochem.co.uk${productLinkMatch[1]}`
-        return {
-          vendor: 'Fluorochem Ltd.',
-          productUrl: foundProductUrl,
-          price: null,
-          availability: null,
-          description: null,
-          source: 'fluorochem.co.uk (search result)'
+    // Try direct product page first
+    try {
+      const response = await fetch(productUrl, {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
         }
+      })
+      
+      if (response.ok) {
+        const html = await response.text()
+        
+        // Extract price information (look for various price formats)
+        const pricePatterns = [
+          /£\s*([\d,]+\.?\d*)/,
+          /EUR\s*([\d,]+\.?\d*)/,
+          /USD\s*([\d,]+\.?\d*)/,
+          /Price[:\s]*([£$€]?\s*[\d,]+\.?\d*)/
+        ]
+        
+        for (const pattern of pricePatterns) {
+          const match = html.match(pattern)
+          if (match) {
+            productData.price = parseFloat(match[1].replace(/[,£$€]/g, ''))
+            break
+          }
+        }
+        
+        // Extract availability
+        const availabilityPatterns = [
+          /availability[:\s]*([^<>\n]+)/i,
+          /stock[:\s]*([^<>\n]+)/i,
+          /status[:\s]*([^<>\n]+)/i
+        ]
+        
+        for (const pattern of availabilityPatterns) {
+          const match = html.match(pattern)
+          if (match) {
+            productData.availability = match[1].trim()
+            break
+          }
+        }
+        
+        // Extract product description
+        const descPatterns = [
+          /<meta[^>]*description[^>]*content="([^"]+)"/i,
+          /<h1[^>]*>([^<]+)</i,
+          /product[:\s]*([^<>\n]+)/i
+        ]
+        
+        for (const pattern of descPatterns) {
+          const match = html.match(pattern)
+          if (match) {
+            productData.description = match[1].trim()
+            break
+          }
+        }
+        
+        productData.productUrl = productUrl
+      }
+    } catch (error) {
+      console.log('Direct product page fetch failed:', error.message)
+    }
+    
+    // If direct page failed, try search
+    if (!productData.productUrl) {
+      try {
+        const searchResponse = await fetch(searchUrl, {
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+          }
+        })
+        
+        if (searchResponse.ok) {
+          const searchHtml = await searchResponse.text()
+          
+          // Look for product links in search results
+          const productLinkMatch = searchHtml.match(/href="([^"]*products[^"]*${productCode}[^"]*)"/i)
+          if (productLinkMatch) {
+            const foundProductUrl = `${baseUrl}${productLinkMatch[1]}`
+            productData.productUrl = foundProductUrl
+          }
+        }
+      } catch (error) {
+        console.log('Search page fetch failed:', error.message)
       }
     }
     
-    return null
+    // Add CAS number if provided
+    if (cas) {
+      productData.casNumber = cas
+    }
+    
+    // Add useful links
+    productData.usefulLinks = {
+      sds: sdsUrl,
+      mainSite: baseUrl,
+      contact: `${baseUrl}/contact`,
+      search: searchUrl
+    }
+    
+    return productData
     
   } catch (error) {
     console.error('Fluorochem lookup error:', error)

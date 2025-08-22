@@ -360,6 +360,10 @@ function displayVendorLookupResult(data) {
     html += `<div style="margin-bottom: 8px;"><strong>Product URL:</strong> <a href="${data.productUrl}" target="_blank" style="color: var(--accent-color);">${data.productUrl}</a></div>`
   }
   
+  if (data.sdsUrl) {
+    html += `<div style="margin-bottom: 8px;"><strong>Safety Data Sheet:</strong> <a href="${data.sdsUrl}" target="_blank" style="color: var(--accent-color);">View SDS (PDF)</a></div>`
+  }
+  
   if (data.price) {
     html += `<div style="margin-bottom: 8px;"><strong>Price:</strong> ${data.price}</div>`
   }
@@ -370,6 +374,35 @@ function displayVendorLookupResult(data) {
   
   if (data.description) {
     html += `<div style="margin-bottom: 8px;"><strong>Description:</strong> ${data.description}</div>`
+  }
+  
+  if (data.casNumber) {
+    html += `<div style="margin-bottom: 8px;"><strong>CAS Number:</strong> ${data.casNumber}</div>`
+  }
+  
+  if (data.companyInfo) {
+    html += `<div style="margin-top: 12px; padding: 8px; background: var(--bg-tertiary); border-radius: 4px; font-size: 12px;">`
+    html += `<div style="margin-bottom: 4px;"><strong>Company Information:</strong></div>`
+    html += `<div style="margin-bottom: 2px;">${data.companyInfo.address}</div>`
+    html += `<div style="margin-bottom: 2px;">Phone: ${data.companyInfo.phone}</div>`
+    html += `<div style="margin-bottom: 2px;">Email: <a href="mailto:${data.companyInfo.email}" style="color: var(--accent-color);">${data.companyInfo.email}</a></div>`
+    html += `<div style="margin-bottom: 2px;">Website: <a href="${data.companyInfo.website}" target="_blank" style="color: var(--accent-color);">${data.companyInfo.website}</a></div>`
+    html += `</div>`
+  }
+  
+  if (data.usefulLinks) {
+    html += `<div style="margin-top: 12px;">`
+    html += `<div style="margin-bottom: 4px;"><strong>Useful Links:</strong></div>`
+    if (data.usefulLinks.sds) {
+      html += `<div style="margin-bottom: 2px;">• <a href="${data.usefulLinks.sds}" target="_blank" style="color: var(--accent-color);">Safety Data Sheet</a></div>`
+    }
+    if (data.usefulLinks.mainSite) {
+      html += `<div style="margin-bottom: 2px;">• <a href="${data.usefulLinks.mainSite}" target="_blank" style="color: var(--accent-color);">Main Website</a></div>`
+    }
+    if (data.usefulLinks.contact) {
+      html += `<div style="margin-bottom: 2px;">• <a href="${data.usefulLinks.contact}" target="_blank" style="color: var(--accent-color);">Contact Page</a></div>`
+    }
+    html += `</div>`
   }
   
   if (data.note) {
@@ -507,6 +540,24 @@ document.addEventListener('DOMContentLoaded', () => {
           setTimeout(() => {
             lookupVendorInfo()
           }, 500)
+        }
+        
+        // Auto-detect Fluorochem vendor if catalog matches pattern (F + 6 digits)
+        if (p?.catalog && p.catalog !== null && !p?.vendor) {
+          const fluorochemPattern = /^F\d{6}$/
+          if (fluorochemPattern.test(p.catalog)) {
+            console.log('Auto-detected Fluorochem vendor for catalog:', p.catalog)
+            const vendorInput = document.getElementById('vendor')
+            if (vendorInput && !vendorInput.value) {
+              vendorInput.value = 'Fluorochem'
+              console.log('Set vendor to Fluorochem')
+              
+              // Auto-lookup vendor info after setting vendor
+              setTimeout(() => {
+                lookupVendorInfo()
+              }, 500)
+            }
+          }
         }
         
         if (p?.amount && p.amount !== null && !Number.isNaN(p.amount)) {

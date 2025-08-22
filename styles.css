@@ -1248,15 +1248,36 @@ tbody tr:last-child td {
   border-radius: 6px;
   font-size: 14px;
   line-height: 1.4;
+  max-height: 400px;
+  overflow-y: auto;
 }
 
 #vendorLookupResult a {
   text-decoration: none;
   color: var(--accent-color);
+  word-break: break-all;
 }
 
 #vendorLookupResult a:hover {
   text-decoration: underline;
+}
+
+#vendorLookupResult .company-info {
+  background: var(--bg-tertiary);
+  border-radius: 4px;
+  padding: 8px;
+  margin: 8px 0;
+  font-size: 12px;
+}
+
+#vendorLookupResult .useful-links {
+  margin: 8px 0;
+}
+
+#vendorLookupResult .useful-links a {
+  display: block;
+  margin: 2px 0;
+  padding: 2px 0;
 }
 
 #lookupVendorBtn {
