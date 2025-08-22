@@ -261,16 +261,15 @@ function renderInventory() {
               <th>Item Name</th>
               <th>Vendor</th>
               <th>Catalog #</th>
-              <th>CAS</th>
+              <th>CAS Number</th>
               <th>Lot Number</th>
-              <th>Amount</th>
-              <th>Unit Size</th>
               <th>Price</th>
-              <th>Location</th>
-              <th>URL</th>
+              <th>Unit Size</th>
+              <th>Amount in Stock</th>
               <th>Min Stock</th>
               <th>Max Stock</th>
-              <th>Image</th>
+              <th>Links</th>
+              <th>Location</th>
               <th>3D Model</th>
               <th>Actions</th>
             </tr>
@@ -310,9 +309,16 @@ function renderInventoryTable() {
       <td>${item.catalog || ''}</td>
       <td>${item.cas || ''}</td>
       <td>${item.lot_number || ''}</td>
-      <td>${item.amount || ''}</td>
-      <td>${item.amount_unit || ''}</td>
       <td>${item.price ? `$${item.price}` : ''}</td>
+      <td>${item.unit_size || ''}</td>
+      <td>${item.amount || ''} ${item.amount_unit || ''}</td>
+      <td>${item.min_stock || ''}</td>
+      <td>${item.max_stock || ''}</td>
+      <td>
+        ${item.url ? `<a href="${item.url}" target="_blank" style="color: var(--accent-color);">Product Link</a>` : ''}
+        ${item.vendor && item.catalog && item.vendor.toLowerCase().includes('fluorochem') ? 
+          `<br><a href="https://sds.fluorochem.co.uk/eng/sds_${item.catalog}_en.pdf" target="_blank" style="color: var(--accent-color); font-size: 12px;">📄 SDS (PDF)</a>` : ''}
+      </td>
       <td>${item.location || ''}</td>
       <td>${item.url ? `<a href="${item.url}" target="_blank">Link</a>` : ''}</td>
       <td>${item.min_stock || ''}</td>
@@ -585,9 +591,16 @@ function renderFilteredInventory(filteredItems) {
       <td>${item.catalog || ''}</td>
       <td>${item.cas || ''}</td>
       <td>${item.lot_number || ''}</td>
-      <td>${item.amount || ''}</td>
-      <td>${item.amount_unit || ''}</td>
       <td>${item.price ? `$${item.price}` : ''}</td>
+      <td>${item.unit_size || ''}</td>
+      <td>${item.amount || ''} ${item.amount_unit || ''}</td>
+      <td>${item.min_stock || ''}</td>
+      <td>${item.max_stock || ''}</td>
+      <td>
+        ${item.url ? `<a href="${item.url}" target="_blank" style="color: var(--accent-color);">Product Link</a>` : ''}
+        ${item.vendor && item.catalog && item.vendor.toLowerCase().includes('fluorochem') ? 
+          `<br><a href="https://sds.fluorochem.co.uk/eng/sds_${item.catalog}_en.pdf" target="_blank" style="color: var(--accent-color); font-size: 12px;">📄 SDS (PDF)</a>` : ''}
+      </td>
       <td>${item.location || ''}</td>
       <td>${item.url ? `<a href="${item.url}" target="_blank">Link</a>` : ''}</td>
       <td>${item.min_stock || ''}</td>
