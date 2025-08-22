@@ -20,6 +20,8 @@ const locationSelect = document.getElementById('location')
 const newLocationInput = document.getElementById('newLocation')
 const addLocationBtn = document.getElementById('addLocationBtn')
 const formError = document.getElementById('formError')
+const lookupVendorBtn = document.getElementById('lookupVendorBtn')
+const vendorLookupResult = document.getElementById('vendorLookupResult')
 
 const viewerEl = document.getElementById('viewer3d-small')
 const darkModeToggle = document.getElementById('darkModeToggle')
@@ -304,6 +306,107 @@ function renderLocationOptions() {
   })
 }
 
+async function lookupVendorInfo() {
+  const vendorInput = document.getElementById('vendor')
+  const catalogInput = document.getElementById('catalog')
+  const casInput = document.getElementById('cas')
+  
+  if (!vendorInput.value.trim() || !catalogInput.value.trim()) {
+    alert('Please enter both vendor and catalog number to lookup vendor information')
+    return
+  }
+  
+  try {
+    lookupVendorBtn.textContent = '🔍 Looking up...'
+    lookupVendorBtn.disabled = true
+    vendorLookupResult.style.display = 'none'
+    
+    const token = localStorage.getItem('authToken')
+    const response = await fetch('/api/vendor-lookup', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify({
+        vendor: vendorInput.value.trim(),
+        productCode: catalogInput.value.trim(),
+        cas: casInput.value.trim() || null
+      })
+    })
+    
+    if (response.ok) {
+      const data = await response.json()
+      displayVendorLookupResult(data)
+    } else {
+      const error = await response.json()
+      vendorLookupResult.innerHTML = `<div style="color: #e53e3e;">❌ Lookup failed: ${error.message}</div>`
+      vendorLookupResult.style.display = 'block'
+    }
+  } catch (error) {
+    console.error('Vendor lookup error:', error)
+    vendorLookupResult.innerHTML = '<div style="color: #e53e3e;">❌ Network error. Please try again.</div>'
+    vendorLookupResult.style.display = 'block'
+  } finally {
+    lookupVendorBtn.textContent = '🔍 Lookup Vendor Info'
+    lookupVendorBtn.disabled = false
+  }
+}
+
+function displayVendorLookupResult(data) {
+  let html = '<div style="font-size: 14px;">'
+  
+  if (data.productUrl) {
+    html += `<div style="margin-bottom: 8px;"><strong>Product URL:</strong> <a href="${data.productUrl}" target="_blank" style="color: var(--accent-color);">${data.productUrl}</a></div>`
+  }
+  
+  if (data.price) {
+    html += `<div style="margin-bottom: 8px;"><strong>Price:</strong> ${data.price}</div>`
+  }
+  
+  if (data.availability) {
+    html += `<div style="margin-bottom: 8px;"><strong>Availability:</strong> ${data.availability}</div>`
+  }
+  
+  if (data.description) {
+    html += `<div style="margin-bottom: 8px;"><strong>Description:</strong> ${data.description}</div>`
+  }
+  
+  if (data.note) {
+    html += `<div style="margin-bottom: 8px; color: #666;"><em>${data.note}</em></div>`
+  }
+  
+  if (data.searchQueries) {
+    html += '<div style="margin-bottom: 8px;"><strong>Search suggestions:</strong><br>'
+    data.searchQueries.forEach(query => {
+      html += `• <a href="https://www.google.com/search?q=${encodeURIComponent(query)}" target="_blank" style="color: var(--accent-color);">${query}</a><br>`
+    })
+    html += '</div>'
+  }
+  
+  html += `<div style="margin-top: 12px; font-size: 12px; color: #666;">Source: ${data.source}</div>`
+  html += '</div>'
+  
+  vendorLookupResult.innerHTML = html
+  vendorLookupResult.style.display = 'block'
+  
+  // Auto-populate URL field if found
+  if (data.productUrl) {
+    const urlInput = document.getElementById('url')
+    if (urlInput && !urlInput.value) {
+      urlInput.value = data.productUrl
+    }
+  }
+  
+  // Auto-populate price field if found
+  if (data.price) {
+    const priceInput = document.getElementById('price')
+    if (priceInput && !priceInput.value) {
+      priceInput.value = data.price
+    }
+  }
+}
+
 document.addEventListener('DOMContentLoaded', () => {
   console.log('DOM Content Loaded - Starting initialization...')
   console.log('=== DEBUGGING INVENTORY ID ===')
@@ -319,6 +422,10 @@ document.addEventListener('DOMContentLoaded', () => {
   
   if (darkModeToggle) {
     darkModeToggle.addEventListener('click', toggleDarkMode)
+  }
+  
+  if (lookupVendorBtn) {
+    lookupVendorBtn.addEventListener('click', lookupVendorInfo)
   }
   
   showLookupSection(true)
@@ -392,6 +499,14 @@ document.addEventListener('DOMContentLoaded', () => {
             lotNumberInput.value = p.lotNumber
             console.log('Set lot number to:', p.lotNumber)
           }
+        }
+        
+        // Auto-lookup vendor info if we have vendor and catalog
+        if (p?.vendor && p?.catalog && p.vendor !== null && p.catalog !== null) {
+          console.log('Auto-looking up vendor info for:', p.vendor, p.catalog)
+          setTimeout(() => {
+            lookupVendorInfo()
+          }, 500)
         }
         
         if (p?.amount && p.amount !== null && !Number.isNaN(p.amount)) {

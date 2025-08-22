@@ -121,6 +121,17 @@ async function createTablesIfNotExist() {
     await pool.query(createInventoryItemsTable)
     await pool.query(createLocationsTable)
     
+    // Ensure lot_number column exists (for existing tables)
+    try {
+      await pool.query(`
+        ALTER TABLE inventory_items 
+        ADD COLUMN IF NOT EXISTS lot_number VARCHAR(255)
+      `)
+      console.log('Ensured lot_number column exists')
+    } catch (error) {
+      console.log('lot_number column already exists or error:', error.message)
+    }
+    
     console.log('Database tables ready!')
   } catch (error) {
     console.error('Error creating tables:', error)
@@ -581,39 +592,45 @@ app.post('/api/migrate-db', async (req, res) => {
   try {
     console.log('Starting database migration...')
     
-    const addImageDataColumn = `
-      ALTER TABLE inventory_items 
-      ADD COLUMN IF NOT EXISTS image_data TEXT
-    `
+    const migrations = [
+      {
+        name: 'Add image_data column',
+        sql: `ALTER TABLE inventory_items ADD COLUMN IF NOT EXISTS image_data TEXT`
+      },
+      {
+        name: 'Add model_cid column',
+        sql: `ALTER TABLE inventory_items ADD COLUMN IF NOT EXISTS model_cid VARCHAR(255)`
+      },
+      {
+        name: 'Add inventory_id column',
+        sql: `ALTER TABLE inventory_items ADD COLUMN IF NOT EXISTS inventory_id INTEGER`
+      },
+      {
+        name: 'Add inventory_id to locations',
+        sql: `ALTER TABLE locations ADD COLUMN IF NOT EXISTS inventory_id INTEGER REFERENCES inventories(id) ON DELETE CASCADE`
+      },
+      {
+        name: 'Add lot_number column',
+        sql: `ALTER TABLE inventory_items ADD COLUMN IF NOT EXISTS lot_number VARCHAR(255)`
+      }
+    ]
     
-    const addModelCidColumn = `
-      ALTER TABLE inventory_items 
-      ADD COLUMN IF NOT EXISTS model_cid VARCHAR(255)
-    `
-    
-    const addInventoryIdColumn = `
-      ALTER TABLE inventory_items 
-      ADD COLUMN IF NOT EXISTS inventory_id INTEGER
-    `
-    
-    const addInventoryIdToLocations = `
-      ALTER TABLE locations 
-      ADD COLUMN IF NOT EXISTS inventory_id INTEGER REFERENCES inventories(id) ON DELETE CASCADE
-    `
-    
-    const addLotNumberColumn = `
-      ALTER TABLE inventory_items 
-      ADD COLUMN IF NOT EXISTS lot_number VARCHAR(255)
-    `
-    
-    await pool.query(addImageDataColumn)
-    await pool.query(addModelCidColumn)
-    await pool.query(addInventoryIdColumn)
-    await pool.query(addInventoryIdToLocations)
-    await pool.query(addLotNumberColumn)
+    for (const migration of migrations) {
+      try {
+        console.log(`Running migration: ${migration.name}`)
+        await pool.query(migration.sql)
+        console.log(`✓ ${migration.name} completed`)
+      } catch (error) {
+        console.log(`⚠ ${migration.name} failed:`, error.message)
+        // Continue with other migrations even if one fails
+      }
+    }
     
     console.log('Database migration completed!')
-    res.json({ message: 'Database migration completed successfully' })
+    res.json({ 
+      message: 'Database migration completed successfully',
+      migrations: migrations.length
+    })
   } catch (error) {
     console.error('Migration error:', error)
     res.status(500).json({ message: 'Migration failed', error: error.message })
@@ -805,6 +822,230 @@ app.post('/api/export-inventory/:inventoryId', authenticateToken, async (req, re
   }
 })
 
+app.post('/api/vendor-lookup', authenticateToken, async (req, res) => {
+  try {
+    const { vendor, productCode, cas } = req.body
+    
+    if (!vendor || !productCode) {
+      return res.status(400).json({ message: 'Vendor and product code are required' })
+    }
+    
+    console.log(`Looking up vendor data for ${vendor} product ${productCode}`)
+    
+    let vendorData = null
+    
+    // Fluorochem integration
+    if (vendor.toLowerCase().includes('fluorochem')) {
+      vendorData = await lookupFluorochemProduct(productCode, cas)
+    }
+    // Sigma-Aldrich integration
+    else if (vendor.toLowerCase().includes('sigma') || vendor.toLowerCase().includes('aldrich')) {
+      vendorData = await lookupSigmaAldrichProduct(productCode, cas)
+    }
+    // Fisher Scientific integration
+    else if (vendor.toLowerCase().includes('fisher') || vendor.toLowerCase().includes('thermo')) {
+      vendorData = await lookupFisherProduct(productCode, cas)
+    }
+    // Generic web search fallback
+    else {
+      vendorData = await genericVendorSearch(vendor, productCode, cas)
+    }
+    
+    if (vendorData) {
+      res.json(vendorData)
+    } else {
+      res.status(404).json({ message: 'No vendor information found' })
+    }
+    
+  } catch (error) {
+    console.error('Vendor lookup error:', error)
+    res.status(500).json({ message: 'Vendor lookup failed', error: error.message })
+  }
+})
+
+async function lookupFluorochemProduct(productCode, cas) {
+  try {
+    console.log(`Looking up Fluorochem product: ${productCode}`)
+    
+    // Try direct product URL first
+    const productUrl = `https://www.fluorochem.co.uk/products/${productCode}`
+    
+    // Use a headless browser approach or fetch with proper headers
+    const response = await fetch(productUrl, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+      }
+    })
+    
+    if (response.ok) {
+      const html = await response.text()
+      
+      // Extract price information
+      const priceMatch = html.match(/£\s*([\d,]+\.?\d*)/)
+      const price = priceMatch ? parseFloat(priceMatch[1].replace(/,/g, '')) : null
+      
+      // Extract availability
+      const availabilityMatch = html.match(/availability[:\s]*([^<>\n]+)/i)
+      const availability = availabilityMatch ? availabilityMatch[1].trim() : null
+      
+      // Extract description
+      const descMatch = html.match(/<meta[^>]*description[^>]*content="([^"]+)"/i)
+      const description = descMatch ? descMatch[1] : null
+      
+      return {
+        vendor: 'Fluorochem Ltd.',
+        productUrl: productUrl,
+        price: price,
+        availability: availability,
+        description: description,
+        source: 'fluorochem.co.uk'
+      }
+    }
+    
+    // Fallback: Search their catalog
+    const searchUrl = `https://www.fluorochem.co.uk/search?q=${encodeURIComponent(productCode)}`
+    const searchResponse = await fetch(searchUrl, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+      }
+    })
+    
+    if (searchResponse.ok) {
+      const searchHtml = await searchResponse.text()
+      
+      // Look for product links in search results
+      const productLinkMatch = searchHtml.match(/href="([^"]*products[^"]*${productCode}[^"]*)"/i)
+      if (productLinkMatch) {
+        const foundProductUrl = `https://www.fluorochem.co.uk${productLinkMatch[1]}`
+        return {
+          vendor: 'Fluorochem Ltd.',
+          productUrl: foundProductUrl,
+          price: null,
+          availability: null,
+          description: null,
+          source: 'fluorochem.co.uk (search result)'
+        }
+      }
+    }
+    
+    return null
+    
+  } catch (error) {
+    console.error('Fluorochem lookup error:', error)
+    return null
+  }
+}
+
+async function lookupSigmaAldrichProduct(productCode, cas) {
+  try {
+    console.log(`Looking up Sigma-Aldrich product: ${productCode}`)
+    
+    // Sigma-Aldrich product URLs
+    const productUrl = `https://www.sigmaaldrich.com/US/en/product/${productCode}`
+    
+    const response = await fetch(productUrl, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+      }
+    })
+    
+    if (response.ok) {
+      const html = await response.text()
+      
+      // Extract price information
+      const priceMatch = html.match(/\$([\d,]+\.?\d*)/)
+      const price = priceMatch ? parseFloat(priceMatch[1].replace(/,/g, '')) : null
+      
+      // Extract availability
+      const availabilityMatch = html.match(/availability[:\s]*([^<>\n]+)/i)
+      const availability = availabilityMatch ? availabilityMatch[1].trim() : null
+      
+      return {
+        vendor: 'Sigma-Aldrich',
+        productUrl: productUrl,
+        price: price,
+        availability: availability,
+        description: null,
+        source: 'sigmaaldrich.com'
+      }
+    }
+    
+    return null
+    
+  } catch (error) {
+    console.error('Sigma-Aldrich lookup error:', error)
+    return null
+  }
+}
+
+async function lookupFisherProduct(productCode, cas) {
+  try {
+    console.log(`Looking up Fisher Scientific product: ${productCode}`)
+    
+    // Fisher Scientific product URLs
+    const productUrl = `https://www.fishersci.com/shop/products/${productCode}`
+    
+    const response = await fetch(productUrl, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+      }
+    })
+    
+    if (response.ok) {
+      const html = await response.text()
+      
+      // Extract price information
+      const priceMatch = html.match(/\$([\d,]+\.?\d*)/)
+      const price = priceMatch ? parseFloat(priceMatch[1].replace(/,/g, '')) : null
+      
+      return {
+        vendor: 'Fisher Scientific',
+        productUrl: productUrl,
+        price: price,
+        availability: null,
+        description: null,
+        source: 'fishersci.com'
+      }
+    }
+    
+    return null
+    
+  } catch (error) {
+    console.error('Fisher Scientific lookup error:', error)
+    return null
+  }
+}
+
+async function genericVendorSearch(vendor, productCode, cas) {
+  try {
+    console.log(`Generic search for ${vendor} product ${productCode}`)
+    
+    // Try to construct a search URL based on common vendor patterns
+    const searchQueries = [
+      `${vendor} ${productCode}`,
+      `${vendor} ${productCode} ${cas || ''}`,
+      `${productCode} ${vendor}`,
+      `${cas || ''} ${vendor}`
+    ].filter(q => q.trim())
+    
+    // For now, return a generic search suggestion
+    return {
+      vendor: vendor,
+      productUrl: null,
+      price: null,
+      availability: null,
+      description: null,
+      source: 'generic_search',
+      searchQueries: searchQueries,
+      note: `Try searching for: ${searchQueries[0]}`
+    }
+    
+  } catch (error) {
+    console.error('Generic vendor search error:', error)
+    return null
+  }
+}
+
 function generateCSVContent(items, locations, inventoryName) {
   const headers = [
     'Item Name',
@@ -874,14 +1115,21 @@ function cleanupExpiredTokens() {
 setInterval(cleanupExpiredTokens, 5 * 60 * 1000)
 
 const port = process.env.PORT || 3000
-app.listen(port, () => {
+app.listen(port, async () => {
   console.log(`Server running on port ${port}`)
   console.log('Authentication system ready!')
   console.log('Email configuration:', {
     user: process.env.EMAIL_USER ? 'Set' : 'Not set',
     pass: process.env.EMAIL_PASS ? 'Set' : 'Not set'
   })
-  createTablesIfNotExist()
+  
+  try {
+    await createTablesIfNotExist()
+    console.log('Database initialization completed successfully')
+  } catch (error) {
+    console.error('Database initialization failed:', error)
+    console.log('You may need to run the database migration manually')
+  }
 })
 
 

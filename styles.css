@@ -1243,4 +1243,37 @@ tbody tr:last-child td {
   }
 }
 
+#vendorLookupResult {
+  border: 1px solid var(--border-primary);
+  border-radius: 6px;
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+#vendorLookupResult a {
+  text-decoration: none;
+  color: var(--accent-color);
+}
+
+#vendorLookupResult a:hover {
+  text-decoration: underline;
+}
+
+#lookupVendorBtn {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-primary);
+  color: var(--text-primary);
+  transition: all 0.2s ease;
+}
+
+#lookupVendorBtn:hover:not(:disabled) {
+  background: var(--bg-tertiary);
+  border-color: var(--accent-color);
+}
+
+#lookupVendorBtn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 
