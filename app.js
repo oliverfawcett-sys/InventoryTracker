@@ -874,6 +874,40 @@ async function changePassword() {
   }
 }
 
+async function exportInventoryToCSV() {
+  if (!currentInventoryId) {
+    alert('Please select an inventory first')
+    return
+  }
+
+  try {
+    const token = localStorage.getItem('authToken')
+    if (!token) {
+      window.location.href = 'login.html'
+      return
+    }
+
+    const response = await fetch(`/api/export-inventory/${currentInventoryId}`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      }
+    })
+
+    if (response.ok) {
+      const result = await response.json()
+      alert(`CSV export has been sent to your email address. Check your inbox for the file.`)
+    } else {
+      const error = await response.json()
+      alert(`Export failed: ${error.message}`)
+    }
+  } catch (error) {
+    console.error('Export error:', error)
+    alert('Export failed. Please try again.')
+  }
+}
+
 function showView(viewName) {
   // Hide all views
   document.querySelectorAll('.view-content').forEach(view => {

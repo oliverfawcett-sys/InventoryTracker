@@ -838,6 +838,16 @@ tbody tr:last-child td {
   min-width: auto;
   padding: 12px 20px;
   font-size: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.inventory-actions .btn img {
+  width: 20px;
+  height: 20px;
+  margin-right: 8px;
+  object-fit: contain;
 }
 
 .location-list h3 {

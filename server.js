@@ -689,6 +689,166 @@ app.post('/api/clear-all-data', authenticateToken, async (req, res) => {
   }
 })
 
+app.post('/api/export-inventory/:inventoryId', authenticateToken, async (req, res) => {
+  try {
+    const { inventoryId } = req.params
+    
+    const userCheck = await pool.query('SELECT id, email, name FROM users WHERE id = $1', [req.user.userId])
+    if (userCheck.rows.length === 0) {
+      return res.status(401).json({ message: 'User not found. Please log in again.' })
+    }
+    
+    const user = userCheck.rows[0]
+    
+    const inventoryCheck = await pool.query('SELECT name FROM inventories WHERE id = $1 AND user_id = $2', [inventoryId, req.user.userId])
+    if (inventoryCheck.rows.length === 0) {
+      return res.status(404).json({ message: 'Inventory not found' })
+    }
+    
+    const inventory = inventoryCheck.rows[0]
+    
+    const itemsResult = await pool.query(
+      'SELECT * FROM inventory_items WHERE inventory_id = $1 AND user_id = $2 ORDER BY created_at DESC',
+      [inventoryId, req.user.userId]
+    )
+    
+    const locationsResult = await pool.query(
+      'SELECT * FROM locations WHERE inventory_id = $1 AND user_id = $2 ORDER BY name',
+      [inventoryId, req.user.userId]
+    )
+    
+    const items = itemsResult.rows
+    const locations = locationsResult.rows
+    
+    if (!transporter) {
+      return res.status(500).json({ message: 'Email service not configured. Please contact support.' })
+    }
+    
+    const csvContent = generateCSVContent(items, locations, inventory.name)
+    const csvBuffer = Buffer.from(csvContent, 'utf-8')
+    const csvBase64 = csvBuffer.toString('base64')
+    
+    const senderName = process.env.EMAIL_SENDER_NAME || 'Inventory Tracker'
+    const senderEmail = process.env.EMAIL_USER || 'noreply@inventorytracker.com'
+    
+    const mailOptions = {
+      from: `"${senderName}" <${senderEmail}>`,
+      to: user.email,
+      subject: `CSV Export - ${inventory.name} Inventory`,
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background-color: #f8fafc; padding: 20px;">
+          <div style="background-color: white; border-radius: 12px; padding: 32px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
+            <div style="text-align: center; margin-bottom: 32px;">
+              <h1 style="color: #1e40af; margin: 0; font-size: 28px; font-weight: 700;">🧪 Inventory Tracker</h1>
+              <p style="color: #6b7280; margin: 8px 0 0 0; font-size: 16px;">Lab Equipment Management System</p>
+            </div>
+            
+            <h2 style="color: #1e40af; margin: 0 0 24px 0; font-size: 22px; font-weight: 600;">CSV Export Complete</h2>
+            
+            <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 0 0 16px 0;">Hello <strong>${user.name}</strong>,</p>
+            
+            <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 0 0 24px 0;">Your CSV export for <strong>${inventory.name}</strong> inventory has been generated successfully.</p>
+            
+            <div style="background-color: #f3f4f6; border-radius: 8px; padding: 16px; margin: 24px 0;">
+              <p style="color: #6b7280; font-size: 14px; margin: 0; text-align: center;">
+                <strong>📊 Export Summary:</strong><br>
+                • Items: ${items.length}<br>
+                • Locations: ${locations.length}<br>
+                • Generated: ${new Date().toLocaleString()}
+              </p>
+            </div>
+            
+            <p style="color: #6b7280; font-size: 14px; line-height: 1.5; margin: 0 0 16px 0;">The CSV file is attached to this email. You can open it in Excel, Google Sheets, or any spreadsheet application.</p>
+            
+            <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 24px 0;">
+            
+            <div style="text-align: center;">
+              <p style="color: #9ca3af; font-size: 12px; margin: 0;">Best regards,</p>
+              <p style="color: #1e40af; font-size: 14px; font-weight: 600; margin: 4px 0 0 0;">Inventory Tracker Team</p>
+              <p style="color: #9ca3af; font-size: 12px; margin: 8px 0 0 0;">Lab Equipment Management System</p>
+            </div>
+          </div>
+        </div>
+      `,
+      attachments: [
+        {
+          filename: `${inventory.name.replace(/[^a-zA-Z0-9]/g, '_')}_inventory_${new Date().toISOString().split('T')[0]}.csv`,
+          content: csvBase64,
+          encoding: 'base64'
+        }
+      ]
+    }
+    
+    await transporter.sendMail(mailOptions)
+    console.log(`CSV export email sent to ${user.email} for inventory ${inventoryId}`)
+    
+    res.json({ 
+      message: 'CSV export sent successfully',
+      itemCount: items.length,
+      locationCount: locations.length
+    })
+    
+  } catch (error) {
+    console.error('Export inventory error:', error)
+    res.status(500).json({ message: 'Export failed. Please try again.' })
+  }
+})
+
+function generateCSVContent(items, locations, inventoryName) {
+  const headers = [
+    'Item Name',
+    'Vendor',
+    'Catalog Number',
+    'CAS Number',
+    'Price',
+    'Unit Size',
+    'Amount in Stock',
+    'Amount Unit',
+    'Min Stock',
+    'Max Stock',
+    'URL',
+    'Location',
+    'Model CID',
+    'Created Date'
+  ]
+  
+  const csvRows = [headers.join(',')]
+  
+  items.forEach(item => {
+    const row = [
+      `"${(item.item_name || '').replace(/"/g, '""')}"`,
+      `"${(item.vendor || '').replace(/"/g, '""')}"`,
+      `"${(item.catalog || '').replace(/"/g, '""')}"`,
+      `"${(item.cas || '').replace(/"/g, '""')}"`,
+      item.price || '',
+      `"${(item.unit_size || '').replace(/"/g, '""')}"`,
+      item.amount || '',
+      `"${(item.amount_unit || '').replace(/"/g, '""')}"`,
+      item.min_stock || '',
+      item.max_stock || '',
+      `"${(item.url || '').replace(/"/g, '""')}"`,
+      `"${(item.location || '').replace(/"/g, '""')}"`,
+      `"${(item.model_cid || '').replace(/"/g, '""')}"`,
+      `"${item.created_at || ''}"`
+    ]
+    csvRows.push(row.join(','))
+  })
+  
+  csvRows.push('') // Empty row for separation
+  csvRows.push('Locations') // Locations header
+  csvRows.push('Location Name,Created Date')
+  
+  locations.forEach(location => {
+    const row = [
+      `"${(location.name || '').replace(/"/g, '""')}"`,
+      `"${location.created_at || ''}"`
+    ]
+    csvRows.push(row.join(','))
+  })
+  
+  return csvRows.join('\n')
+}
+
 function cleanupExpiredTokens() {
   const now = Date.now()
   for (const [token, data] of RESET_TOKENS.entries()) {
