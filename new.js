@@ -378,6 +378,22 @@ document.addEventListener('DOMContentLoaded', () => {
           }
         }
         
+        if (p?.catalog && p.catalog !== null) {
+          const catalogInput = document.getElementById('catalog')
+          if (catalogInput && !catalogInput.value) {
+            catalogInput.value = p.catalog
+            console.log('Set catalog to:', p.catalog)
+          }
+        }
+        
+        if (p?.lotNumber && p.lotNumber !== null) {
+          const lotNumberInput = document.getElementById('lotNumber')
+          if (lotNumberInput && !lotNumberInput.value) {
+            lotNumberInput.value = p.lotNumber
+            console.log('Set lot number to:', p.lotNumber)
+          }
+        }
+        
         if (p?.amount && p.amount !== null && !Number.isNaN(p.amount)) {
           amount.value = String(p.amount)
           console.log('Set amount to:', p.amount)
@@ -523,21 +539,22 @@ itemForm.addEventListener('submit', async e => {
        },
                body: JSON.stringify({
           inventoryId: Number(currentInventoryId),
-         itemName: itemName.value.trim(),
-         vendor: vendor.value.trim(),
-         catalog: catalog.value.trim(),
-         cas: cas.value.trim(),
-         price: price.value ? Number(price.value) : null,
-         unitSize: unitSize.value.trim(),
-         amount: amount.value ? Number(amount.value) : null,
-         amountUnit: amountUnit.value,
-         minStock: minStock.value ? Number(minStock.value) : null,
-         maxStock: maxStock.value ? Number(maxStock.value) : null,
-         url: url.value.trim(),
-         location: locationSelect.value,
-         imageData: imageData,
-         modelCid: modelCid
-       })
+          itemName: itemName.value.trim(),
+          vendor: vendor.value.trim(),
+          catalog: catalog.value.trim(),
+          cas: cas.value.trim(),
+          lotNumber: lotNumber.value.trim(),
+          price: price.value ? Number(price.value) : null,
+          unitSize: unitSize.value.trim(),
+          amount: amount.value ? Number(amount.value) : null,
+          amountUnit: amountUnit.value,
+          minStock: minStock.value ? Number(minStock.value) : null,
+          maxStock: maxStock.value ? Number(maxStock.value) : null,
+          url: url.value.trim(),
+          location: locationSelect.value,
+          imageData: imageData,
+          modelCid: modelCid
+        })
      })
     
     if (response.ok) {

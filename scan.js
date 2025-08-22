@@ -161,12 +161,14 @@ async function extractCasAndRedirect(file) {
       return
     }
     
-    if (data.cas || data.vendor) {
+    if (data.cas || data.vendor || data.productCode || data.lotNumber) {
       const payload = { 
         cas: data.cas || '', 
         amount: data.massValue || null, 
         amountUnit: data.massUnit || null,
-        vendor: data.vendor || ''
+        vendor: data.vendor || '',
+        catalog: data.productCode || '',
+        lotNumber: data.lotNumber || ''
       }
       try { 
         localStorage.setItem('pendingNewItemPopulate', JSON.stringify(payload)) 

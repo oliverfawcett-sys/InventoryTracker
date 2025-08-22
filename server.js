@@ -101,6 +101,7 @@ async function createTablesIfNotExist() {
         location VARCHAR(255),
         image_data TEXT,
         model_cid VARCHAR(255),
+        lot_number VARCHAR(255),
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `
@@ -475,7 +476,7 @@ app.get('/api/inventory', authenticateToken, async (req, res) => {
 
 app.post('/api/inventory', authenticateToken, async (req, res) => {
   try {
-    const { inventoryId, itemName, vendor, catalog, cas, price, unitSize, amount, amountUnit, minStock, maxStock, url, location, imageData, modelCid } = req.body
+    const { inventoryId, itemName, vendor, catalog, cas, price, unitSize, amount, amountUnit, minStock, maxStock, url, location, imageData, modelCid, lotNumber } = req.body
     
     if (!inventoryId) {
       return res.status(400).json({ message: 'Inventory ID is required' })
@@ -487,16 +488,17 @@ app.post('/api/inventory', authenticateToken, async (req, res) => {
       vendor,
       catalog,
       cas,
+      lotNumber,
       imageDataLength: imageData ? imageData.length : 0,
       modelCid
     })
     
     const result = await pool.query(
       `INSERT INTO inventory_items 
-       (inventory_id, user_id, item_name, vendor, catalog, cas, price, unit_size, amount, amount_unit, min_stock, max_stock, url, location, image_data, model_cid) 
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16) 
+       (inventory_id, user_id, item_name, vendor, catalog, cas, price, unit_size, amount, amount_unit, min_stock, max_stock, url, location, image_data, model_cid, lot_number) 
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17) 
        RETURNING *`,
-      [inventoryId, req.user.userId, itemName, vendor, catalog, cas, price, unitSize, amount, amountUnit, minStock, maxStock, url, location, imageData, modelCid]
+      [inventoryId, req.user.userId, itemName, vendor, catalog, cas, price, unitSize, amount, amountUnit, minStock, maxStock, url, location, imageData, modelCid, lotNumber]
     )
     
     console.log('Item added successfully with ID:', result.rows[0].id)
@@ -538,8 +540,8 @@ app.post('/api/extract-cas', authenticateToken, upload.single('image'), async (r
     const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
     const mime = req.file.mimetype || 'image/jpeg'
     const dataUrl = `data:${mime};base64,${req.file.buffer.toString('base64')}`
-    const sys = 'Extract from product label images. Reply with strict JSON only: {"cas": string|null, "massValue": number|null, "massUnit": string|null, "vendor": string|null}. massUnit should be a short unit like g, mg, kg, mL, L, µL. vendor should be the company/brand name. If not visible, use nulls.'
-    const user = [{ type: 'text', text: 'Find CAS, mass value, unit, and vendor on this label and return JSON only.' }, { type: 'image_url', image_url: { url: dataUrl } }]
+    const sys = 'Extract from product label images. Reply with strict JSON only: {"cas": string|null, "massValue": number|null, "massUnit": string|null, "vendor": string|null, "productCode": string|null, "lotNumber": string|null}. massUnit should be a short unit like g, mg, kg, mL, L, µL. vendor should be the company/brand name. productCode should be the catalog/product code (like F005423). lotNumber should be the batch/lot number (like L409495). If not visible, use nulls.'
+    const user = [{ type: 'text', text: 'Find CAS, mass value, unit, vendor, product code, and lot number on this label and return JSON only.' }, { type: 'image_url', image_url: { url: dataUrl } }]
     const resp = await client.chat.completions.create({ model: 'gpt-4o-mini', messages: [{ role: 'system', content: sys }, { role: 'user', content: user }], temperature: 0 })
     const text = (resp.choices?.[0]?.message?.content || '').trim()
     let parsed = null
@@ -553,21 +555,23 @@ app.post('/api/extract-cas', authenticateToken, upload.single('image'), async (r
     }
     if (!parsed) {
       const casMatch = text.match(/\b(\d{2,7}-\d{2}-\d)\b/)
-      let mv = null, mu = null, vendor = null
+      let mv = null, mu = null, vendor = null, productCode = null, lotNumber = null
       const massMatch = text.match(/(\d+(?:\.\d+)?)\s*(mg|g|kg|µg|ug|ml|mL|l|L|µL)/i)
       if (massMatch) {
         mv = Number(massMatch[1])
         const unitRaw = massMatch[2]
         mu = unitRaw.replace(/^ug$/i, 'µg').replace(/^ml$/i, 'mL').replace(/^l$/i, 'L')
       }
-      res.status(200).json({ cas: casMatch ? casMatch[1] : '', massValue: mv, massUnit: mu, vendor: vendor, raw: text })
+      res.status(200).json({ cas: casMatch ? casMatch[1] : '', massValue: mv, massUnit: mu, vendor: vendor, productCode: productCode, lotNumber: lotNumber, raw: text })
       return
     }
     const cas = typeof parsed.cas === 'string' ? parsed.cas : ''
     const massValue = typeof parsed.massValue === 'number' ? parsed.massValue : null
     const massUnit = typeof parsed.massUnit === 'string' ? parsed.massUnit : null
     const vendor = typeof parsed.vendor === 'string' ? parsed.vendor : null
-    res.json({ cas, massValue, massUnit, vendor })
+    const productCode = typeof parsed.productCode === 'string' ? parsed.productCode : null
+    const lotNumber = typeof parsed.lotNumber === 'string' ? parsed.lotNumber : null
+    res.json({ cas, massValue, massUnit, vendor, productCode, lotNumber })
   } catch (e) {
     res.status(500).json({ error: 'OpenAI request failed', message: String(e?.message || e) })
   }
@@ -597,10 +601,16 @@ app.post('/api/migrate-db', async (req, res) => {
       ADD COLUMN IF NOT EXISTS inventory_id INTEGER REFERENCES inventories(id) ON DELETE CASCADE
     `
     
+    const addLotNumberColumn = `
+      ALTER TABLE inventory_items 
+      ADD COLUMN IF NOT EXISTS lot_number VARCHAR(255)
+    `
+    
     await pool.query(addImageDataColumn)
     await pool.query(addModelCidColumn)
     await pool.query(addInventoryIdColumn)
     await pool.query(addInventoryIdToLocations)
+    await pool.query(addLotNumberColumn)
     
     console.log('Database migration completed!')
     res.json({ message: 'Database migration completed successfully' })
@@ -801,6 +811,7 @@ function generateCSVContent(items, locations, inventoryName) {
     'Vendor',
     'Catalog Number',
     'CAS Number',
+    'Lot Number',
     'Price',
     'Unit Size',
     'Amount in Stock',
@@ -821,6 +832,7 @@ function generateCSVContent(items, locations, inventoryName) {
       `"${(item.vendor || '').replace(/"/g, '""')}"`,
       `"${(item.catalog || '').replace(/"/g, '""')}"`,
       `"${(item.cas || '').replace(/"/g, '""')}"`,
+      `"${(item.lot_number || '').replace(/"/g, '""')}"`,
       item.price || '',
       `"${(item.unit_size || '').replace(/"/g, '""')}"`,
       item.amount || '',

@@ -262,6 +262,7 @@ function renderInventory() {
               <th>Vendor</th>
               <th>Catalog #</th>
               <th>CAS</th>
+              <th>Lot Number</th>
               <th>Amount</th>
               <th>Unit Size</th>
               <th>Price</th>
@@ -308,6 +309,7 @@ function renderInventoryTable() {
       <td>${item.vendor || ''}</td>
       <td>${item.catalog || ''}</td>
       <td>${item.cas || ''}</td>
+      <td>${item.lot_number || ''}</td>
       <td>${item.amount || ''}</td>
       <td>${item.amount_unit || ''}</td>
       <td>${item.price ? `$${item.price}` : ''}</td>
@@ -582,6 +584,7 @@ function renderFilteredInventory(filteredItems) {
       <td>${item.vendor || ''}</td>
       <td>${item.catalog || ''}</td>
       <td>${item.cas || ''}</td>
+      <td>${item.lot_number || ''}</td>
       <td>${item.amount || ''}</td>
       <td>${item.amount_unit || ''}</td>
       <td>${item.price ? `$${item.price}` : ''}</td>
