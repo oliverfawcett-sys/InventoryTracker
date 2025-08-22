@@ -161,17 +161,17 @@ async function extractCasAndRedirect(file) {
       return
     }
     
-    if (data.cas) {
+    if (data.cas || data.vendor) {
       const payload = { 
-        cas: data.cas, 
+        cas: data.cas || '', 
         amount: data.massValue || null, 
-        amountUnit: data.massUnit || null 
+        amountUnit: data.massUnit || null,
+        vendor: data.vendor || ''
       }
       try { 
         localStorage.setItem('pendingNewItemPopulate', JSON.stringify(payload)) 
         console.log('Stored pending data:', payload)
         
-        // Verify it was stored correctly
         const stored = localStorage.getItem('pendingNewItemPopulate')
         console.log('Verified stored data:', stored)
         const parsed = JSON.parse(stored)
@@ -187,13 +187,11 @@ async function extractCasAndRedirect(file) {
     const reader = new FileReader()
     reader.onload = function(e) {
       try { 
-        // Compress the image to reduce size
         const img = new Image()
         img.onload = function() {
           const canvas = document.createElement('canvas')
           const ctx = canvas.getContext('2d')
           
-          // Set canvas size to reasonable dimensions
           const maxSize = 400
           let { width, height } = img
           
@@ -212,7 +210,6 @@ async function extractCasAndRedirect(file) {
           canvas.width = width
           canvas.height = height
           
-          // Draw and compress
           ctx.drawImage(img, 0, 0, width, height)
           const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.7)
         
@@ -220,7 +217,6 @@ async function extractCasAndRedirect(file) {
           console.log('Stored compressed image data, length:', compressedDataUrl.length)
           console.log('Image data preview:', compressedDataUrl.substring(0, 100) + '...')
           
-          // Verify the data was stored
           const stored = localStorage.getItem('scannedImageData')
           console.log('Verified stored data length:', stored ? stored.length : 'null')
         }
@@ -231,7 +227,6 @@ async function extractCasAndRedirect(file) {
     }
     reader.readAsDataURL(file)
     
-    // Wait a bit longer to ensure localStorage is written
     setTimeout(() => {
       try { 
         console.log('Redirecting to new.html with image data stored')

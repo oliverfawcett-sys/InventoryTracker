@@ -538,8 +538,8 @@ app.post('/api/extract-cas', authenticateToken, upload.single('image'), async (r
     const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
     const mime = req.file.mimetype || 'image/jpeg'
     const dataUrl = `data:${mime};base64,${req.file.buffer.toString('base64')}`
-    const sys = 'Extract from product label images. Reply with strict JSON only: {"cas": string|null, "massValue": number|null, "massUnit": string|null}. massUnit should be a short unit like g, mg, kg, mL, L, µL. If not visible, use nulls.'
-    const user = [{ type: 'text', text: 'Find CAS, mass value and unit on this label and return JSON only.' }, { type: 'image_url', image_url: { url: dataUrl } }]
+    const sys = 'Extract from product label images. Reply with strict JSON only: {"cas": string|null, "massValue": number|null, "massUnit": string|null, "vendor": string|null}. massUnit should be a short unit like g, mg, kg, mL, L, µL. vendor should be the company/brand name. If not visible, use nulls.'
+    const user = [{ type: 'text', text: 'Find CAS, mass value, unit, and vendor on this label and return JSON only.' }, { type: 'image_url', image_url: { url: dataUrl } }]
     const resp = await client.chat.completions.create({ model: 'gpt-4o-mini', messages: [{ role: 'system', content: sys }, { role: 'user', content: user }], temperature: 0 })
     const text = (resp.choices?.[0]?.message?.content || '').trim()
     let parsed = null
@@ -553,20 +553,21 @@ app.post('/api/extract-cas', authenticateToken, upload.single('image'), async (r
     }
     if (!parsed) {
       const casMatch = text.match(/\b(\d{2,7}-\d{2}-\d)\b/)
-      let mv = null, mu = null
+      let mv = null, mu = null, vendor = null
       const massMatch = text.match(/(\d+(?:\.\d+)?)\s*(mg|g|kg|µg|ug|ml|mL|l|L|µL)/i)
       if (massMatch) {
         mv = Number(massMatch[1])
         const unitRaw = massMatch[2]
         mu = unitRaw.replace(/^ug$/i, 'µg').replace(/^ml$/i, 'mL').replace(/^l$/i, 'L')
       }
-      res.status(200).json({ cas: casMatch ? casMatch[1] : '', massValue: mv, massUnit: mu, raw: text })
+      res.status(200).json({ cas: casMatch ? casMatch[1] : '', massValue: mv, massUnit: mu, vendor: vendor, raw: text })
       return
     }
     const cas = typeof parsed.cas === 'string' ? parsed.cas : ''
     const massValue = typeof parsed.massValue === 'number' ? parsed.massValue : null
     const massUnit = typeof parsed.massUnit === 'string' ? parsed.massUnit : null
-    res.json({ cas, massValue, massUnit })
+    const vendor = typeof parsed.vendor === 'string' ? parsed.vendor : null
+    res.json({ cas, massValue, massUnit, vendor })
   } catch (e) {
     res.status(500).json({ error: 'OpenAI request failed', message: String(e?.message || e) })
   }

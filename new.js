@@ -370,6 +370,14 @@ document.addEventListener('DOMContentLoaded', () => {
           console.log('Set CAS to:', p.cas)
         }
         
+        if (p?.vendor && p.vendor !== null) {
+          const vendorInput = document.getElementById('vendor')
+          if (vendorInput && !vendorInput.value) {
+            vendorInput.value = p.vendor
+            console.log('Set vendor to:', p.vendor)
+          }
+        }
+        
         if (p?.amount && p.amount !== null && !Number.isNaN(p.amount)) {
           amount.value = String(p.amount)
           console.log('Set amount to:', p.amount)
